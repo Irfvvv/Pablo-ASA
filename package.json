@@ -36,7 +36,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "Pablo ASA Setup.${ext}"
+      "artifactName": "PabloASASetup.${ext}"
     },
     "nsis": {
       "oneClick": true,

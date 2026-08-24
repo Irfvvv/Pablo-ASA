@@ -62,7 +62,7 @@ function releaseUrl() {
 }
 
 function localSetupPath() {
-  const names = ["Pablo ASA Setup.exe", `PabloASA-Setup-${app.getVersion()}.exe`];
+  const names = ["PabloASASetup.exe", "Pablo ASA Setup.exe"];
   const dirs = [path.join(process.cwd(), "dist"), path.join(app.getAppPath(), "dist")];
   for (const dir of dirs) {
     for (const name of names) {
