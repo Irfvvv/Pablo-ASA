@@ -180,17 +180,25 @@ function getIniValue(text, key) {
   return m ? m[1].trim() : null;
 }
 
-// Calibrado ahora mismo: FOVMultiplier 1.70 → Camera FOV 190 en el menú.
-const ASA_CAMERA_FOV_BASE = 190 / 1.7;
+// Ajuste lineal con dos cargas reales del menú (el juego sí recargó):
+//   FOVMultiplier 1.700000 → Camera FOV 190
+//   FOVMultiplier 1.521053 → Camera FOV 154
+// (÷90, ÷100 y una sola regla de proporcionalidad no coinciden con el slider.)
+const FOV_MAP_M1 = 1.521053;
+const FOV_MAP_Y1 = 154;
+const FOV_MAP_M2 = 1.7;
+const FOV_MAP_Y2 = 190;
+const FOV_MAP_SLOPE = (FOV_MAP_Y2 - FOV_MAP_Y1) / (FOV_MAP_M2 - FOV_MAP_M1);
+const FOV_MAP_INTERCEPT = FOV_MAP_Y2 - FOV_MAP_SLOPE * FOV_MAP_M2;
 
 function multiplierToDegrees(mult) {
   const n = parseFloat(mult);
   if (!Number.isFinite(n) || n <= 0) return 90;
-  return Math.round(n * ASA_CAMERA_FOV_BASE);
+  return Math.round(n * FOV_MAP_SLOPE + FOV_MAP_INTERCEPT);
 }
 
 function degreesToMultiplier(degrees) {
-  return (Number(degrees) / ASA_CAMERA_FOV_BASE).toFixed(6);
+  return ((Number(degrees) - FOV_MAP_INTERCEPT) / FOV_MAP_SLOPE).toFixed(6);
 }
 
 function readFov(asaPath) {
@@ -377,7 +385,9 @@ function openFolder(folder) {
 
 module.exports = {
   CLEAN_EXEC,
-  ASA_CAMERA_FOV_BASE,
+  FOV_MAP_SLOPE,
+  FOV_MAP_INTERCEPT,
+  degreesToMultiplier,
   detectAsaPath,
   configDir,
   binariesDir,
