@@ -643,9 +643,9 @@ const COMMANDS = [
     group: "camara",
     name: "FOV (consola)",
     off: "fov 90",
-    on: "fov 150",
-    quita: "FOV estrecho (90). Mejor usa la pestaña FOV: escribe 150 y se guarda en el INI.",
-    pone: "fov 150 en consola. El permanente es FOVMultiplier en GameUserSettings.ini.",
+    on: "fov 170",
+    quita: "FOV estrecho. El permanente es la pestaña FOV: el número es el Camera FOV del menú (170 → FOVMultiplier 1.416667).",
+    pone: "fov 170 en consola. El del menú se guarda en GameUserSettings.ini.",
   },
   {
     group: "camara",

@@ -180,24 +180,24 @@ function getIniValue(text, key) {
 
 function multiplierToDegrees(mult) {
   const n = parseFloat(mult);
-  if (!Number.isFinite(n) || n <= 0) return 90;
-  return Math.round(n * 90);
+  if (!Number.isFinite(n) || n <= 0) return 120;
+  return Math.round(n * 120);
 }
 
 function degreesToMultiplier(degrees) {
-  return (Number(degrees) / 90).toFixed(6);
+  return (Number(degrees) / 120).toFixed(6);
 }
 
 function readFov(asaPath) {
   const file = gusPath(asaPath);
-  if (!exists(file)) return 90;
+  if (!exists(file)) return 120;
   return multiplierToDegrees(getIniValue(readText(file), "FOVMultiplier"));
 }
 
 function writeFov(asaPath, degrees) {
   const d = Number(degrees);
-  if (!Number.isFinite(d) || d < 70 || d > 180) {
-    throw new Error("FOV tiene que ser un número entre 70 y 180 (ej. 150)");
+  if (!Number.isFinite(d) || d < 70 || d > 220) {
+    throw new Error("FOV tiene que ser un número entre 70 y 220 (ej. 170)");
   }
   const file = gusPath(asaPath);
   if (!exists(file)) throw new Error("No existe GameUserSettings.ini. Abre ASA una vez.");
@@ -289,13 +289,8 @@ function clearConsoleHistory(asaPath) {
   return changed;
 }
 
-function launchAsa(asaPath) {
-  const exe = path.join(asaPath, "ShooterGame", "Binaries", "Win64", "ArkAscended.exe");
-  if (exists(exe)) {
-    execFile(exe, { detached: true, stdio: "ignore" }).unref();
-    return exe;
-  }
-  execFile("cmd", ["/c", "start", "steam://rungameid/2399830"], { detached: true, stdio: "ignore" }).unref();
+function launchAsa() {
+  execFile("cmd", ["/c", "start", "", "steam://rungameid/2399830"], { detached: true, stdio: "ignore" }).unref();
   return "steam://rungameid/2399830";
 }
 

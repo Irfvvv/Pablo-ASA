@@ -37,10 +37,11 @@
           </div>
           <div class="card">
             <h3>Auto-update</h3>
-            <p id="updStatus">Al abrir busca updates en GitHub. No hace falta que estés en el PC: tus amigos las reciben solos.</p>
+            <p id="updStatus">Al abrir busca updates en GitHub. Tus amigos usan el instalador; npm start no se autoinstala.</p>
             <div class="row">
               <button class="btn" id="btnUpdate">Buscar update</button>
               <button class="btn secondary hidden" id="btnInstall">Instalar y reiniciar</button>
+              <button class="btn secondary" id="btnSetupExe">Abrir instalador</button>
             </div>
           </div>
           <div class="card">
@@ -53,11 +54,11 @@
 
       <section id="tab-fov" class="hidden">
         <h2>FOV</h2>
-        <p class="lead">Escribe el FOV que quieres (ejemplo <span class="mono">150</span>) y se guarda en <span class="mono">GameUserSettings.ini</span> como FOVMultiplier. Cierra el menú o reloguea para verlo. En consola también: <span class="mono">fov 150</span>.</p>
+        <p class="lead">Escribe el mismo número que Camera FOV del menú (ejemplo <span class="mono">170</span>). Se guarda <span class="mono">FOVMultiplier</span> en GameUserSettings.ini. Cierra ASA antes de guardar, si no el juego lo pisa al salir.</p>
         <div class="card">
           <label>FOV (grados)</label>
           <div class="row">
-            <input id="fovInput" type="number" min="70" max="180" step="1" value="90" style="max-width:160px" />
+            <input id="fovInput" type="number" min="70" max="220" step="1" value="120" style="max-width:160px" />
             <button class="btn" id="btnFov">Guardar en archivos</button>
           </div>
           <p id="fovHint" class="mono" style="margin-top:10px"></p>

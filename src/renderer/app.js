@@ -33,11 +33,11 @@ function esc(s) {
 
 function fovHint(raw) {
   const d = Number(raw);
-  if (!Number.isFinite(d) || d < 70 || d > 180) {
-    $("fovHint").textContent = "Pon un número entre 70 y 180. Ejemplo: 150";
+  if (!Number.isFinite(d) || d < 70 || d > 220) {
+    $("fovHint").textContent = "Pon un número entre 70 y 220. Ejemplo: 170";
     return;
   }
-  $("fovHint").textContent = d + "  →  FOVMultiplier=" + (d / 90).toFixed(6) + "  en GameUserSettings.ini";
+  $("fovHint").textContent = d + "  →  FOVMultiplier=" + (d / 120).toFixed(6) + "  (el Camera FOV del menú)";
 }
 
 async function saveFov() {
@@ -133,7 +133,11 @@ function paint() {
   $("asaStatus").innerHTML = ok
     ? `<span class="ok">Encontrado</span><div class="mono">${esc(state.config.asaPath)}</div>`
     : `<span class="bad">Ruta no válida</span><div class="mono">${esc(state.config?.asaPath || "—")}</div>`;
-  $("fovInput").value = String(state.fov ?? 90);
+  if (!state.packaged) {
+    $("updStatus").textContent =
+      "Estás en npm start. El auto-update de verdad es el instalador (Abrir instalador). Este modo solo consulta GitHub.";
+  }
+  $("fovInput").value = String(state.fov ?? 120);
   fovHint($("fovInput").value);
   renderExecs();
   fillGroups();
@@ -203,14 +207,19 @@ $("btnSaveSetup").addEventListener("click", async () => {
 $("btnUpdate").addEventListener("click", async () => {
   const r = await window.pablo.checkUpdates();
   if (!r?.ok) toast(r?.error || "No se pudo buscar", false);
+  else toast(r.message || ("GitHub: v" + (r.version || "—")));
 });
 $("btnInstall").addEventListener("click", () => window.pablo.installUpdate());
+$("btnSetupExe").addEventListener("click", async () => {
+  const r = await window.pablo.openSetup();
+  toast(r?.ok ? "Abriendo instalador…" : r?.error || "No hay Setup", r?.ok);
+});
 
 window.pablo.onUpdateStatus((s) => {
   const map = {
     checking: "Buscando update en GitHub…",
     available: "Hay update " + (s.version || "") + " — se descarga solo",
-    current: "Estás al día",
+    current: s.message || "Estás al día",
     downloading: "Descargando " + Math.round(s.percent || 0) + "%",
     ready: "Update " + (s.version || "") + " listo. Instalar y reiniciar.",
     error: s.message || "Error de update",

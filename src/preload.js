@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("pablo", {
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
   installUpdate: () => ipcRenderer.invoke("install-update"),
+  openReleases: () => ipcRenderer.invoke("open-releases"),
+  openSetup: () => ipcRenderer.invoke("open-setup"),
   onUpdateStatus: (cb) => {
     ipcRenderer.on("update-status", (_e, data) => cb(data));
   },
