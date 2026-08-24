@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFile, spawnSync } = require("child_process");
 
-const ASA_PROCESSES = ["ArkAscended.exe", "ArkAscended_WinGDK.exe"];
+const ASA_PROCESSES = ["ArkAscended.exe", "ArkAscended_BE.exe", "ArkAscended_WinGDK.exe"];
 
 const STEAM_LIBRARIES = [
   "C:\\Program Files (x86)\\Steam",
@@ -180,9 +180,8 @@ function getIniValue(text, key) {
   return m ? m[1].trim() : null;
 }
 
-// Calibrado con el menú de ASA: FOVMultiplier 1.416667 → Camera FOV 133.
-// (÷120 dejaba el slider en 133 cuando pedías 170; ÷90 es el de ASE, no el de este menú.)
-const ASA_CAMERA_FOV_BASE = 133 / 1.416667;
+// Calibrado con el menú de ASA: 170 en la app (FOVMultiplier 1.810777) salió Camera FOV 212.
+const ASA_CAMERA_FOV_BASE = 212 / 1.810777;
 
 function multiplierToDegrees(mult) {
   const n = parseFloat(mult);
@@ -258,7 +257,7 @@ async function applyFov(asaPath, degrees) {
     if (close.wasRunning) launchAsa();
     throw err;
   }
-  await sleep(close.wasRunning ? 5000 : 800);
+  await sleep(close.wasRunning ? 8000 : 800);
   launchAsa();
   return { ...written, closedGame: close.wasRunning, relaunched: true };
 }
