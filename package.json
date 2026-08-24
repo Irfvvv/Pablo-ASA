@@ -1,7 +1,7 @@
 {
   "name": "pablo-asa",
   "productName": "Pablo ASA",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "FOV, execs, autoclicker y comandos para ARK Survival Ascended. Auto-update por GitHub.",
   "main": "src/main.js",
   "author": "Pablo",
@@ -36,7 +36,8 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "PabloASASetup.${ext}"
+      "artifactName": "PabloASASetup.${ext}",
+      "executableName": "PabloASA"
     },
     "nsis": {
       "oneClick": true,
@@ -45,7 +46,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Pablo ASA",
-      "include": "build/installer.nsh"
+      "include": "pablo-custom.nsh"
     },
     "publish": {
       "provider": "github",
