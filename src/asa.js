@@ -164,7 +164,7 @@ function backupFile(file) {
 }
 
 function setIniValue(text, key, value) {
-  const re = new RegExp(`^${key}=.*$`, "m");
+  const re = new RegExp(`^${key}=[^\\r\\n]*`, "m");
   if (re.test(text)) return text.replace(re, `${key}=${value}`);
   if (/\[\/Script\/ShooterGame\.ShooterGameUserSettings\]/i.test(text)) {
     return text.replace(
@@ -180,19 +180,23 @@ function getIniValue(text, key) {
   return m ? m[1].trim() : null;
 }
 
+// Calibrado con el menú de ASA: FOVMultiplier 1.416667 → Camera FOV 133.
+// (÷120 dejaba el slider en 133 cuando pedías 170; ÷90 es el de ASE, no el de este menú.)
+const ASA_CAMERA_FOV_BASE = 133 / 1.416667;
+
 function multiplierToDegrees(mult) {
   const n = parseFloat(mult);
-  if (!Number.isFinite(n) || n <= 0) return 120;
-  return Math.round(n * 120);
+  if (!Number.isFinite(n) || n <= 0) return 90;
+  return Math.round(n * ASA_CAMERA_FOV_BASE);
 }
 
 function degreesToMultiplier(degrees) {
-  return (Number(degrees) / 120).toFixed(6);
+  return (Number(degrees) / ASA_CAMERA_FOV_BASE).toFixed(6);
 }
 
 function readFov(asaPath) {
   const file = gusPath(asaPath);
-  if (!exists(file)) return 120;
+  if (!exists(file)) return 90;
   return multiplierToDegrees(getIniValue(readText(file), "FOVMultiplier"));
 }
 
@@ -353,6 +357,7 @@ function openFolder(folder) {
 
 module.exports = {
   CLEAN_EXEC,
+  ASA_CAMERA_FOV_BASE,
   detectAsaPath,
   configDir,
   binariesDir,

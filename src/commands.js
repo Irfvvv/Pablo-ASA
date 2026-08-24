@@ -644,7 +644,7 @@ const COMMANDS = [
     name: "FOV (consola)",
     off: "fov 90",
     on: "fov 170",
-    quita: "FOV estrecho. El permanente es la pestaña FOV: el número es el Camera FOV del menú (170 → FOVMultiplier 1.416667).",
+    quita: "FOV estrecho. El permanente es la pestaña FOV (el número del Camera FOV del menú).",
     pone: "fov 170 en consola. El del menú se guarda en GameUserSettings.ini.",
   },
   {

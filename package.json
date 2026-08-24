@@ -1,7 +1,7 @@
 {
   "name": "pablo-asa",
   "productName": "Pablo ASA",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "FOV, execs, autoclicker y comandos para ARK Survival Ascended. Auto-update por GitHub.",
   "main": "src/main.js",
   "author": "Pablo",

@@ -183,17 +183,18 @@ handle("get-state", () => {
   currentCfg = loadConfig();
   const asaPath = currentCfg.asaPath || "";
   const pathOk = Boolean(asaPath && asa.exists(asaPath));
-  let fov = 120;
+  let fov = 90;
   try {
     if (pathOk) fov = asa.readFov(asaPath);
   } catch {
-    fov = 120;
+    fov = 90;
   }
   return {
     version: app.getVersion(),
     config: currentCfg,
     asaOk: pathOk,
     fov,
+    fovBase: asa.ASA_CAMERA_FOV_BASE,
     execs: pathOk ? asa.listExecs(asaPath) : [],
     cleanExec: asa.CLEAN_EXEC,
     commandGroups: GROUPS,
