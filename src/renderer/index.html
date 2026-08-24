@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>Pablo ASA</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand">
+        <h1>Pablo ASA</h1>
+        <small id="ver">v—</small>
+      </div>
+      <nav class="nav">
+        <button data-tab="home" class="active">Inicio</button>
+        <button data-tab="fov">FOV</button>
+        <button data-tab="execs">Execs</button>
+        <button data-tab="cmds">Commands</button>
+        <button data-tab="setup">Setup</button>
+      </nav>
+      <div class="side-foot" id="updateLabel">Update: —</div>
+    </aside>
+    <main class="main">
+      <section id="tab-home">
+        <h2>Inicio</h2>
+        <p class="lead">Los INIs de ASE no sirven en ASA. Aquí se usa consola / execs. El FOV se guarda en GameUserSettings.ini.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>ASA</h3>
+            <p id="asaStatus">Buscando…</p>
+            <div class="row">
+              <button class="btn" id="btnLaunch">Abrir ASA</button>
+              <button class="btn secondary" id="btnDetect">Detectar ruta</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Auto-update</h3>
+            <p id="updStatus">Al abrir busca updates en GitHub. No hace falta que estés en el PC: tus amigos las reciben solos.</p>
+            <div class="row">
+              <button class="btn" id="btnUpdate">Buscar update</button>
+              <button class="btn secondary hidden" id="btnInstall">Instalar y reiniciar</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Preset clean</h3>
+            <p>Escribe el exec 4: nubes/fog off, cuevas claras, sin outlines.</p>
+            <button class="btn" id="btnClean">Escribir exec 4</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-fov" class="hidden">
+        <h2>FOV</h2>
+        <p class="lead">Escribe el FOV que quieres (ejemplo <span class="mono">150</span>) y se guarda en <span class="mono">GameUserSettings.ini</span> como FOVMultiplier. Cierra el menú o reloguea para verlo. En consola también: <span class="mono">fov 150</span>.</p>
+        <div class="card">
+          <label>FOV (grados)</label>
+          <div class="row">
+            <input id="fovInput" type="number" min="70" max="180" step="1" value="90" style="max-width:160px" />
+            <button class="btn" id="btnFov">Guardar en archivos</button>
+          </div>
+          <p id="fovHint" class="mono" style="margin-top:10px"></p>
+        </div>
+      </section>
+
+      <section id="tab-execs" class="hidden">
+        <h2>Execs (Binaries)</h2>
+        <p class="lead">En el juego: <span class="mono">exec 4</span>. Aquí los editas y se guardan en ShooterGame/Binaries.</p>
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn secondary" id="btnOpenBin">Abrir Binaries</button>
+        </div>
+        <div class="list" id="execList"></div>
+        <div class="card" style="margin-top:12px">
+          <h3 id="execTitle">Editar exec</h3>
+          <textarea id="execBody"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="btnSaveExec">Guardar</button>
+            <button class="btn secondary" id="btnCopyExec">Copiar</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-cmds" class="hidden">
+        <h2>Commands</h2>
+        <p class="lead">Copia y pégalo en consola (o métalo en un exec). Off = quita / baja. On = lo deja puesto. Los <span class="mono">show</span> son toggle: dos veces se deshace.</p>
+        <div class="row" style="margin-bottom:12px">
+          <input id="cmdSearch" placeholder="Buscar comando…" style="max-width:280px" />
+          <select id="cmdGroup" style="max-width:220px"></select>
+        </div>
+        <div id="cmdList"></div>
+        <div class="grid" style="margin-top:18px">
+          <div class="card">
+            <h3>Consola</h3>
+            <p>Borra HistoryBuffer. Cierra ASA antes.</p>
+            <button class="btn" id="btnClearHist">Limpiar historial consola</button>
+          </div>
+          <div class="card">
+            <h3>Carpetas</h3>
+            <div class="row">
+              <button class="btn secondary" id="btnCfg">Config</button>
+              <button class="btn secondary" id="btnAsaDir">Instalación</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-setup" class="hidden">
+        <h2>Setup</h2>
+        <p class="lead">Una vez. Detecta ASA y listo. El auto-update ya viene metido: tus amigos no tienen que configurar nada.</p>
+        <div class="card">
+          <label>Ruta de ARK Survival Ascended</label>
+          <input id="asaPath" />
+          <div class="row" style="margin-top:8px">
+            <button class="btn secondary" id="btnPickAsa">Elegir carpeta</button>
+            <button class="btn secondary" id="btnDetect2">Auto-detect</button>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn" id="btnSaveSetup">Guardar setup</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

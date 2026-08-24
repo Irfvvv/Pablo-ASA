@@ -1,0 +1,56 @@
+{
+  "name": "pablo-asa",
+  "productName": "Pablo ASA",
+  "version": "1.0.0",
+  "description": "FOV, execs y comandos para ARK Survival Ascended. Auto-update por GitHub.",
+  "main": "src/main.js",
+  "author": "Pablo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Irfvvv/Pablo-ASA.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --publish never",
+    "publish": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.pablo.asa",
+    "productName": "Pablo ASA",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "PabloASA-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pablo ASA"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Irfvvv",
+      "repo": "Pablo-ASA",
+      "releaseType": "release"
+    }
+  }
+}
