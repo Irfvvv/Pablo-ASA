@@ -37,7 +37,7 @@ function fovHint(raw) {
     $("fovHint").textContent = "Pon un número entre 70 y 220. Ejemplo: 170";
     return;
   }
-  const base = state?.fovBase || 100;
+  const base = state?.fovBase || 190 / 1.7;
   $("fovHint").textContent = d + "  →  FOVMultiplier=" + (d / base).toFixed(6) + "  (Camera FOV del menú)";
 }
 

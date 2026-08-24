@@ -180,9 +180,8 @@ function getIniValue(text, key) {
   return m ? m[1].trim() : null;
 }
 
-// En ASA el Camera FOV del menú es FOVMultiplier × 100 (slider máx. 1.25 = 125;
-// 1.40 = 140). ÷90 es ASE. Las calibraciones 117/120 perseguían el slider viejo.
-const ASA_CAMERA_FOV_BASE = 100;
+// Calibrado ahora mismo: FOVMultiplier 1.70 → Camera FOV 190 en el menú.
+const ASA_CAMERA_FOV_BASE = 190 / 1.7;
 
 function multiplierToDegrees(mult) {
   const n = parseFloat(mult);
