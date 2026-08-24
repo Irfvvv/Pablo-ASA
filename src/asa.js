@@ -164,8 +164,8 @@ function backupFile(file) {
 }
 
 function setIniValue(text, key, value) {
-  const re = new RegExp(`^${key}=[^\\r\\n]*`, "m");
-  if (re.test(text)) return text.replace(re, `${key}=${value}`);
+  const re = new RegExp(`^${key}=[^\\r\\n]*`, "gm");
+  if (re.test(text)) return text.replace(new RegExp(`^${key}=[^\\r\\n]*`, "gm"), `${key}=${value}`);
   if (/\[\/Script\/ShooterGame\.ShooterGameUserSettings\]/i.test(text)) {
     return text.replace(
       /(\[\/Script\/ShooterGame\.ShooterGameUserSettings\][^\n]*\n)/i,
@@ -180,8 +180,9 @@ function getIniValue(text, key) {
   return m ? m[1].trim() : null;
 }
 
-// Calibrado con el menú de ASA: 170 en la app (FOVMultiplier 1.810777) salió Camera FOV 212.
-const ASA_CAMERA_FOV_BASE = 212 / 1.810777;
+// En ASA el Camera FOV del menú es FOVMultiplier × 100 (slider máx. 1.25 = 125;
+// 1.40 = 140). ÷90 es ASE. Las calibraciones 117/120 perseguían el slider viejo.
+const ASA_CAMERA_FOV_BASE = 100;
 
 function multiplierToDegrees(mult) {
   const n = parseFloat(mult);
@@ -245,6 +246,26 @@ async function closeAsa(timeoutMs = 25000) {
   return { closed: !isAsaRunning(), wasRunning: true };
 }
 
+function keepFovMultiplier(asaPath, multiplier) {
+  let n = 0;
+  const timer = setInterval(() => {
+    n += 1;
+    try {
+      const file = gusPath(asaPath);
+      if (exists(file)) {
+        const cur = getIniValue(readText(file), "FOVMultiplier");
+        if (cur !== String(multiplier)) {
+          writeText(file, setIniValue(readText(file), "FOVMultiplier", multiplier));
+        }
+      }
+    } catch {
+      /* el juego puede tener el archivo abierto */
+    }
+    if (n >= 8) clearInterval(timer);
+  }, 3000);
+  if (typeof timer.unref === "function") timer.unref();
+}
+
 async function applyFov(asaPath, degrees) {
   const close = await closeAsa();
   if (close.wasRunning && !close.closed) {
@@ -259,6 +280,7 @@ async function applyFov(asaPath, degrees) {
   }
   await sleep(close.wasRunning ? 8000 : 800);
   launchAsa();
+  keepFovMultiplier(asaPath, written.multiplier);
   return { ...written, closedGame: close.wasRunning, relaunched: true };
 }
 
