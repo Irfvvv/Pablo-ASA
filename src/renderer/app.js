@@ -32,22 +32,12 @@ function esc(s) {
 }
 
 function fovHint(raw) {
-  const d = Number(raw);
+  const d = Math.round(Number(raw));
   if (!Number.isFinite(d) || d < 70 || d > 220) {
     $("fovHint").textContent = "Pon un número entre 70 y 220. Ejemplo: 170";
     return;
   }
-  const slope = state?.fovMapSlope;
-  const intercept = state?.fovMapIntercept;
-  const mult =
-    Number.isFinite(slope) && slope !== 0 && Number.isFinite(intercept)
-      ? ((d - intercept) / slope).toFixed(6)
-      : asaFallbackMultiplier(d);
-  $("fovHint").textContent = d + "  →  FOVMultiplier=" + mult + "  (Camera FOV del menú)";
-}
-
-function asaFallbackMultiplier(d) {
-  return ((d + 152) / 201.176471).toFixed(6);
+  $("fovHint").textContent = "Camera FOV del menú: " + d;
 }
 
 async function saveFov() {
@@ -55,7 +45,7 @@ async function saveFov() {
   const r = await window.pablo.setFov(Number($("fovInput").value));
   if (r?.ok) {
     const extra = r.closedGame ? "ASA se cerró y se está abriendo otra vez." : "ASA se está abriendo por Steam.";
-    toast("FOV " + r.degrees + " guardado (FOVMultiplier=" + r.multiplier + "). " + extra);
+    toast("Camera FOV " + r.degrees + " guardado. " + extra);
     await refresh();
   } else {
     toast(r?.error || "No se pudo guardar el FOV", false);

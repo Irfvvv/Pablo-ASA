@@ -24,6 +24,7 @@ function defaultConfig() {
   return {
     asaPath: asa.detectAsaPath(),
     setupDone: false,
+    lastFov: 170,
     clicker: {
       type: "mouse",
       button: 0,
@@ -173,7 +174,8 @@ handle("get-state", () => {
   const pathOk = Boolean(asaPath && asa.exists(asaPath));
   let fov = 90;
   try {
-    if (pathOk) fov = asa.readFov(asaPath);
+    if (Number.isFinite(Number(currentCfg.lastFov))) fov = Math.round(Number(currentCfg.lastFov));
+    else if (pathOk) fov = asa.readFov(asaPath);
   } catch {
     fov = 90;
   }
@@ -182,8 +184,6 @@ handle("get-state", () => {
     config: currentCfg,
     asaOk: pathOk,
     fov,
-    fovMapSlope: asa.FOV_MAP_SLOPE,
-    fovMapIntercept: asa.FOV_MAP_INTERCEPT,
     execs: pathOk ? asa.listExecs(asaPath) : [],
     cleanExec: asa.CLEAN_EXEC,
     commandGroups: GROUPS,
@@ -217,6 +217,8 @@ handle("detect-asa", () => {
 handle("set-fov", async (value) => {
   send("fov-status", { message: "Cerrando ASA si está abierto…" });
   const r = await asa.applyFov(loadConfig().asaPath, value);
+  currentCfg = { ...loadConfig(), lastFov: r.degrees };
+  saveConfig(currentCfg);
   return ok(r);
 });
 

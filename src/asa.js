@@ -208,7 +208,7 @@ function readFov(asaPath) {
 }
 
 function writeFov(asaPath, degrees) {
-  const d = Number(degrees);
+  const d = Math.round(Number(degrees));
   if (!Number.isFinite(d) || d < 70 || d > 220) {
     throw new Error("FOV tiene que ser un número entre 70 y 220 (ej. 170)");
   }
