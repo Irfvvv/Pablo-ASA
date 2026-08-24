@@ -18,6 +18,7 @@
         <button data-tab="fov">FOV</button>
         <button data-tab="execs">Execs</button>
         <button data-tab="cmds">Commands</button>
+        <button data-tab="clicker">Autoclicker</button>
         <button data-tab="setup">Setup</button>
       </nav>
       <div class="side-foot" id="updateLabel">Update: —</div>
@@ -37,7 +38,7 @@
           </div>
           <div class="card">
             <h3>Auto-update</h3>
-            <p id="updStatus">Al abrir busca updates en GitHub. Tus amigos usan el instalador; npm start no se autoinstala.</p>
+            <p id="updStatus">Al abrir busca updates en GitHub y los instala sola (como Pablo ARK App). Usa el acceso directo del escritorio, no npm start.</p>
             <div class="row">
               <button class="btn" id="btnUpdate">Buscar update</button>
               <button class="btn secondary hidden" id="btnInstall">Instalar y reiniciar</button>
@@ -54,12 +55,12 @@
 
       <section id="tab-fov" class="hidden">
         <h2>FOV</h2>
-        <p class="lead">Escribe el mismo número que Camera FOV del menú (ejemplo <span class="mono">170</span>). Se guarda <span class="mono">FOVMultiplier</span> en GameUserSettings.ini. Cierra ASA antes de guardar, si no el juego lo pisa al salir.</p>
+        <p class="lead">Igual que Pablo ARK App: cierra ASA, guarda el FOV y lo abre otra vez por Steam. El número es el Camera FOV del menú (ejemplo <span class="mono">170</span>).</p>
         <div class="card">
           <label>FOV (grados)</label>
           <div class="row">
             <input id="fovInput" type="number" min="70" max="220" step="1" value="120" style="max-width:160px" />
-            <button class="btn" id="btnFov">Guardar en archivos</button>
+            <button class="btn" id="btnFov">Aplicar FOV</button>
           </div>
           <p id="fovHint" class="mono" style="margin-top:10px"></p>
         </div>
@@ -103,6 +104,41 @@
               <button class="btn secondary" id="btnAsaDir">Instalación</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="tab-clicker" class="hidden">
+        <h2>Autoclicker</h2>
+        <p class="lead">Macro de Windows: no inyecta en ASA ni toca Easy Anti-Cheat. Es como AutoHotkey (tecla/clic al proceso de delante). No podemos prometer que Wildcard nunca banee macros; úsalo para farm, no para PvP raro.</p>
+        <div class="card">
+          <p id="clickerKeyLabel"><strong>Tecla / botón:</strong> Clic izquierdo</p>
+          <div class="row">
+            <button class="btn" id="btnPickClick">Capturar tecla o ratón</button>
+            <span class="pill" id="clickerCapHint"></span>
+          </div>
+          <label>Intervalo (ms) — 100 ≈ 10 clics/seg</label>
+          <input id="clickerInterval" type="number" min="40" max="5000" step="10" value="100" style="max-width:160px" />
+          <label>Jitter aleatorio (ms) — para que no sea un metrónomo</label>
+          <input id="clickerJitter" type="number" min="0" max="400" step="5" value="20" style="max-width:160px" />
+          <label>Hotkey para start/stop (global)</label>
+          <select id="clickerToggle" style="max-width:200px">
+            <option value="F6">F6</option>
+            <option value="F7">F7</option>
+            <option value="F8" selected>F8</option>
+            <option value="F9">F9</option>
+            <option value="F10">F10</option>
+            <option value="Insert">Insert</option>
+          </select>
+          <label class="check">
+            <input id="clickerOnlyAsa" type="checkbox" checked />
+            Solo si ASA está en primer plano
+          </label>
+          <div class="row" style="margin-top:14px">
+            <button class="btn" id="btnClickerStart">Start</button>
+            <button class="btn secondary" id="btnClickerStop">Stop</button>
+            <span class="pill" id="clickerRun">parado</span>
+          </div>
+          <p class="mono" id="clickerFg" style="margin-top:10px"></p>
         </div>
       </section>
 

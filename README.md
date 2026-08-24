@@ -13,7 +13,7 @@ El repo tiene que ser **público**. Si es privado, el update pide login y a tus 
 
 ## FOV
 
-En la pestaña FOV escribes `150` y se guarda `FOVMultiplier` en `GameUserSettings.ini`. Reloguea o cierra el menú. En consola: `fov 150`.
+En la pestaña FOV escribes `170` y la app cierra ASA, guarda `FOVMultiplier` en `GameUserSettings.ini` y lo reabre por Steam (igual que Pablo ARK App). En consola: `fov 170`.
 
 ## Commands
 

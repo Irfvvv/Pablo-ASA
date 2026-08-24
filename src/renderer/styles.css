@@ -159,3 +159,11 @@ input[type="range"] { flex: 1; }
 .cmd .vals { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
 .cmd .tag-off { color: var(--bad); }
 .cmd .tag-on { color: var(--ok); }
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--text);
+}
+.check input { width: auto; }

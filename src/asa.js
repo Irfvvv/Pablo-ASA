@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const { execFile } = require("child_process");
+const { execFile, spawnSync } = require("child_process");
+
+const ASA_PROCESSES = ["ArkAscended.exe", "ArkAscended_WinGDK.exe"];
 
 const STEAM_LIBRARIES = [
   "C:\\Program Files (x86)\\Steam",
@@ -207,6 +209,56 @@ function writeFov(asaPath, degrees) {
   return { file, degrees: d, multiplier };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isAsaRunning() {
+  for (const name of ASA_PROCESSES) {
+    const r = spawnSync("tasklist", ["/FI", `IMAGENAME eq ${name}`, "/FO", "CSV", "/NH"], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    const out = String(r.stdout || "").toLowerCase();
+    if (out.includes(name.toLowerCase())) return true;
+  }
+  return false;
+}
+
+async function closeAsa(timeoutMs = 25000) {
+  const wasRunning = isAsaRunning();
+  if (!wasRunning) return { closed: true, wasRunning: false };
+  for (const name of ASA_PROCESSES) {
+    spawnSync("taskkill", ["/IM", name, "/F"], { windowsHide: true, encoding: "utf8" });
+  }
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await sleep(400);
+    if (!isAsaRunning()) {
+      await sleep(2000);
+      return { closed: true, wasRunning: true };
+    }
+  }
+  return { closed: !isAsaRunning(), wasRunning: true };
+}
+
+async function applyFov(asaPath, degrees) {
+  const close = await closeAsa();
+  if (close.wasRunning && !close.closed) {
+    throw new Error("No pude cerrar ASA. Ciérralo tú y vuelve a aplicar el FOV.");
+  }
+  let written;
+  try {
+    written = writeFov(asaPath, degrees);
+  } catch (err) {
+    if (close.wasRunning) launchAsa();
+    throw err;
+  }
+  await sleep(close.wasRunning ? 5000 : 800);
+  launchAsa();
+  return { ...written, closedGame: close.wasRunning, relaunched: true };
+}
+
 function listInis(folder) {
   if (!folder || !exists(folder)) return [];
   return fs
@@ -308,6 +360,9 @@ module.exports = {
   deviceProfilesPath,
   readFov,
   writeFov,
+  applyFov,
+  isAsaRunning,
+  closeAsa,
   readExec,
   listExecs,
   writeExec,

@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { autoUpdater } = require("electron-updater");
 const asa = require("./asa");
 const { GROUPS, COMMANDS } = require("./commands");
+const clicker = require("./clicker");
 
 const UPDATE_FEED = {
   provider: "github",
@@ -22,6 +23,16 @@ function defaultConfig() {
   return {
     asaPath: asa.detectAsaPath(),
     setupDone: false,
+    clicker: {
+      type: "mouse",
+      button: 0,
+      vk: 0x45,
+      label: "Clic izquierdo",
+      intervalMs: 100,
+      jitterMs: 20,
+      onlyAsa: true,
+      toggle: "F8",
+    },
   };
 }
 
@@ -100,6 +111,7 @@ function createWindow() {
 app.whenReady().then(() => {
   currentCfg = loadConfig();
   createWindow();
+  bindClickerToggle(currentCfg.clicker?.toggle || "F8");
   if (app.isPackaged) {
     configureUpdater();
     setTimeout(() => {
@@ -112,14 +124,30 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  clicker.stop();
+  globalShortcut.unregisterAll();
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("will-quit", () => {
+  clicker.stop();
+  globalShortcut.unregisterAll();
 });
 
 autoUpdater.on("checking-for-update", () => send("update-status", { state: "checking" }));
 autoUpdater.on("update-available", (info) => send("update-status", { state: "available", version: info.version }));
 autoUpdater.on("update-not-available", () => send("update-status", { state: "current" }));
 autoUpdater.on("download-progress", (p) => send("update-status", { state: "downloading", percent: p.percent }));
-autoUpdater.on("update-downloaded", (info) => send("update-status", { state: "ready", version: info.version }));
+autoUpdater.on("update-downloaded", (info) => {
+  send("update-status", { state: "ready", version: info.version });
+  setTimeout(() => {
+    try {
+      autoUpdater.quitAndInstall(false, true);
+    } catch {
+      /* el botón Instalar sigue disponible */
+    }
+  }, 1800);
+});
 autoUpdater.on("error", (err) => send("update-status", { state: "error", message: friendlyUpdateError(err) }));
 
 function friendlyUpdateError(err) {
@@ -173,6 +201,7 @@ handle("get-state", () => {
     packaged: app.isPackaged,
     setupExe: localSetupPath(),
     releasesUrl: releaseUrl(),
+    clicker: clicker.status(),
   };
 });
 
@@ -195,8 +224,9 @@ handle("detect-asa", () => {
   return ok({ path: found });
 });
 
-handle("set-fov", (value) => {
-  const r = asa.writeFov(loadConfig().asaPath, value);
+handle("set-fov", async (value) => {
+  send("fov-status", { message: "Cerrando ASA si está abierto…" });
+  const r = await asa.applyFov(loadConfig().asaPath, value);
   return ok(r);
 });
 
@@ -292,4 +322,49 @@ handle("open-setup", () => {
 handle("install-update", () => {
   autoUpdater.quitAndInstall();
   return ok();
+});
+
+function bindClickerToggle(accelerator) {
+  globalShortcut.unregisterAll();
+  const acc = accelerator || "F8";
+  const okBind = globalShortcut.register(acc, () => {
+    if (clicker.status().running) {
+      clicker.stop();
+    } else {
+      const cfg = loadConfig();
+      clicker.start(cfg.clicker || {});
+    }
+    send("clicker-status", clicker.status());
+  });
+  return okBind;
+}
+
+handle("clicker-start", (opts) => {
+  const cfg = loadConfig();
+  const next = { ...cfg.clicker, ...opts };
+  currentCfg = { ...cfg, clicker: next };
+  saveConfig(currentCfg);
+  bindClickerToggle(next.toggle);
+  const st = clicker.start(next);
+  send("clicker-status", st);
+  return ok(st);
+});
+
+handle("clicker-stop", () => {
+  clicker.stop();
+  const st = clicker.status();
+  send("clicker-status", st);
+  return ok(st);
+});
+
+handle("clicker-status", () => clicker.status());
+
+handle("clicker-bind-toggle", (accelerator) => {
+  const cfg = loadConfig();
+  const next = { ...cfg.clicker, toggle: accelerator || "F8" };
+  currentCfg = { ...cfg, clicker: next };
+  saveConfig(currentCfg);
+  const bound = bindClickerToggle(next.toggle);
+  if (!bound) throw new Error("Esa tecla de toggle no se pudo registrar (igual está pillada)");
+  return ok({ toggle: next.toggle });
 });

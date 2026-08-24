@@ -18,7 +18,14 @@ contextBridge.exposeInMainWorld("pablo", {
   installUpdate: () => ipcRenderer.invoke("install-update"),
   openReleases: () => ipcRenderer.invoke("open-releases"),
   openSetup: () => ipcRenderer.invoke("open-setup"),
+  clickerStart: (opts) => ipcRenderer.invoke("clicker-start", opts),
+  clickerStop: () => ipcRenderer.invoke("clicker-stop"),
+  clickerStatus: () => ipcRenderer.invoke("clicker-status"),
+  clickerBindToggle: (acc) => ipcRenderer.invoke("clicker-bind-toggle", acc),
   onUpdateStatus: (cb) => {
     ipcRenderer.on("update-status", (_e, data) => cb(data));
+  },
+  onClickerStatus: (cb) => {
+    ipcRenderer.on("clicker-status", (_e, data) => cb(data));
   },
 });
