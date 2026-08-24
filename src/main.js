@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { autoUpdater } = require("electron-updater");
@@ -26,21 +26,24 @@ function defaultConfig() {
     setupDone: false,
     lastFov: 170,
     clicker: {
-      type: "mouse",
-      button: 0,
-      vk: 0x45,
-      label: "Clic izquierdo",
+      button: "Izquierdo",
       intervalMs: 100,
-      jitterMs: 20,
-      onlyAsa: true,
-      toggle: "F8",
+      maxClicks: 0,
+      toggle: "F6",
     },
   };
 }
 
 function loadConfig() {
   try {
-    return { ...defaultConfig(), ...JSON.parse(fs.readFileSync(configPath(), "utf8")) };
+    const saved = JSON.parse(fs.readFileSync(configPath(), "utf8"));
+    const base = defaultConfig();
+    const clickerCfg = { ...base.clicker, ...(saved.clicker || {}) };
+    if (!["Izquierdo", "Derecho", "Central"].includes(clickerCfg.button)) {
+      clickerCfg.button = "Izquierdo";
+    }
+    if (!clickerCfg.toggle) clickerCfg.toggle = "F6";
+    return { ...base, ...saved, clicker: clickerCfg };
   } catch {
     return defaultConfig();
   }
@@ -100,7 +103,10 @@ function createWindow() {
 app.whenReady().then(() => {
   currentCfg = loadConfig();
   createWindow();
-  bindClickerToggle(currentCfg.clicker?.toggle || "F8");
+  clicker.init(
+    (st) => send("clicker-status", st),
+    () => (loadConfig().clicker || {})
+  );
   if (app.isPackaged) {
     configureUpdater();
     setTimeout(() => {
@@ -113,14 +119,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  clicker.stop();
-  globalShortcut.unregisterAll();
+  clicker.shutdown();
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("will-quit", () => {
-  clicker.stop();
-  globalShortcut.unregisterAll();
+  clicker.shutdown();
 });
 
 autoUpdater.on("checking-for-update", () => send("update-status", { state: "checking" }));
@@ -260,6 +264,12 @@ handle("copy-text", (text) => {
   return ok();
 });
 
+handle("run-console", async (text) => {
+  const win32 = require("./win32");
+  await win32.sendToConsole(text);
+  return ok();
+});
+
 handle("open-external", (url) => {
   shell.openExternal(url);
   return ok();
@@ -347,27 +357,11 @@ handle("install-update", () => {
   return ok();
 });
 
-function bindClickerToggle(accelerator) {
-  globalShortcut.unregisterAll();
-  const acc = accelerator || "F8";
-  const okBind = globalShortcut.register(acc, () => {
-    if (clicker.status().running) {
-      clicker.stop();
-    } else {
-      const cfg = loadConfig();
-      clicker.start(cfg.clicker || {});
-    }
-    send("clicker-status", clicker.status());
-  });
-  return okBind;
-}
-
 handle("clicker-start", (opts) => {
   const cfg = loadConfig();
   const next = { ...cfg.clicker, ...opts };
   currentCfg = { ...cfg, clicker: next };
   saveConfig(currentCfg);
-  bindClickerToggle(next.toggle);
   const st = clicker.start(next);
   send("clicker-status", st);
   return ok(st);
@@ -382,12 +376,10 @@ handle("clicker-stop", () => {
 
 handle("clicker-status", () => clicker.status());
 
-handle("clicker-bind-toggle", (accelerator) => {
+handle("clicker-save", (opts) => {
   const cfg = loadConfig();
-  const next = { ...cfg.clicker, toggle: accelerator || "F8" };
+  const next = { ...cfg.clicker, ...opts };
   currentCfg = { ...cfg, clicker: next };
   saveConfig(currentCfg);
-  const bound = bindClickerToggle(next.toggle);
-  if (!bound) throw new Error("Esa tecla de toggle no se pudo registrar (igual está pillada)");
-  return ok({ toggle: next.toggle });
+  return ok(next);
 });

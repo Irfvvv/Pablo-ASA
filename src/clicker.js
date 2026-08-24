@@ -1,99 +1,92 @@
-const { spawn } = require("child_process");
+const win32 = require("./win32");
 
-let child = null;
 let running = false;
+let timer = null;
+let poll = null;
 let current = null;
+let count = 0;
+let startWasDown = false;
+let panicWasDown = false;
+let onStatus = null;
+
+function emit() {
+  if (onStatus) onStatus(status());
+}
 
 function stop() {
   running = false;
-  if (child && child.pid) {
-    try {
-      spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
-    } catch {
-      try {
-        child.kill();
-      } catch {
-        /* ignore */
-      }
-    }
+  if (timer) {
+    clearTimeout(timer);
+    timer = null;
   }
-  child = null;
+  emit();
+  return status();
 }
 
-function buildScript(opts) {
-  const interval = Math.max(40, Math.min(5000, Number(opts.intervalMs) || 100));
-  const jitter = Math.max(0, Math.min(400, Number(opts.jitterMs) || 0));
-  const onlyAsa = opts.onlyAsa !== false;
-  const isMouse = opts.type === "mouse";
-  const button = Number(opts.button) || 0;
-  const vk = Number(opts.vk) || 0x45;
-
-  return `
-Add-Type @"
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-public class PabloInput {
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, UIntPtr dwExtraInfo);
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-  public static string Title() {
-    var sb = new StringBuilder(512);
-    GetWindowText(GetForegroundWindow(), sb, sb.Capacity);
-    return sb.ToString();
+function tick() {
+  if (!running) return;
+  win32.clickOnce(current.button);
+  count += 1;
+  if (count === 1 || count % 8 === 0) emit();
+  if (current.maxClicks && count >= current.maxClicks) {
+    stop();
+    return;
   }
-}
-"@
-$interval = ${interval}
-$jitter = ${jitter}
-$onlyAsa = $${onlyAsa ? "$true" : "$false"}
-$isMouse = $${isMouse ? "$true" : "$false"}
-$button = ${button}
-$vk = ${vk}
-while ($true) {
-  $title = [PabloInput]::Title().ToLower()
-  $asa = $title.Contains("ark") -or $title.Contains("ascended") -or $title.Contains("shooter")
-  if (-not $onlyAsa -or $asa) {
-    if ($isMouse) {
-      if ($button -eq 0) { [PabloInput]::mouse_event(2,0,0,0,[UIntPtr]::Zero); [PabloInput]::mouse_event(4,0,0,0,[UIntPtr]::Zero) }
-      elseif ($button -eq 1) { [PabloInput]::mouse_event(32,0,0,0,[UIntPtr]::Zero); [PabloInput]::mouse_event(64,0,0,0,[UIntPtr]::Zero) }
-      elseif ($button -eq 2) { [PabloInput]::mouse_event(8,0,0,0,[UIntPtr]::Zero); [PabloInput]::mouse_event(16,0,0,0,[UIntPtr]::Zero) }
-      elseif ($button -eq 4) { [PabloInput]::mouse_event(128,0,0,2,[UIntPtr]::Zero); [PabloInput]::mouse_event(256,0,0,2,[UIntPtr]::Zero) }
-      else { [PabloInput]::mouse_event(128,0,0,1,[UIntPtr]::Zero); [PabloInput]::mouse_event(256,0,0,1,[UIntPtr]::Zero) }
-    } else {
-      [PabloInput]::keybd_event([byte]$vk, 0, 0, [UIntPtr]::Zero)
-      [PabloInput]::keybd_event([byte]$vk, 0, 2, [UIntPtr]::Zero)
-    }
-  }
-  $wait = $interval
-  if ($jitter -gt 0) { $wait = $wait + (Get-Random -Minimum 0 -Maximum ($jitter + 1)) }
-  Start-Sleep -Milliseconds $wait
-}
-`.trim();
+  timer = setTimeout(tick, current.intervalMs);
 }
 
 function start(opts) {
   stop();
-  const intervalMs = Math.max(40, Math.min(5000, Number(opts.intervalMs) || 100));
-  const jitterMs = Math.max(0, Math.min(400, Number(opts.jitterMs) || 0));
-  const onlyAsa = opts.onlyAsa !== false;
-  if (opts.type === "key" && !opts.vk) throw new Error("Elige una tecla");
-  current = { ...opts, intervalMs, jitterMs, onlyAsa };
+  const button = win32.CLICKS[opts.button] ? opts.button : "Izquierdo";
+  const intervalMs = Math.max(1, Math.min(5000, Number(opts.intervalMs) || 100));
+  const maxClicks = Math.max(0, Math.round(Number(opts.maxClicks) || 0));
+  current = {
+    button,
+    intervalMs,
+    maxClicks,
+    toggle: opts.toggle || "F6",
+  };
+  count = 0;
   running = true;
-  child = spawn("powershell.exe", ["-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", buildScript(current)], {
-    windowsHide: true,
-    stdio: "ignore",
-  });
-  child.on("exit", () => {
-    running = false;
-    child = null;
-  });
+  emit();
+  timer = setTimeout(tick, 0);
   return status();
 }
 
-function status() {
-  return { running: Boolean(running && child), opts: current };
+function toggle(opts) {
+  if (running) return stop();
+  return start(opts || current || {});
 }
 
-module.exports = { start, stop, status };
+function status() {
+  return {
+    running,
+    count,
+    opts: current,
+  };
+}
+
+function init(emitStatus, getOpts) {
+  onStatus = emitStatus;
+  if (poll) return;
+  poll = setInterval(() => {
+    const cfg = (getOpts && getOpts()) || current || {};
+    const startVk = win32.HOTKEYS[cfg.toggle || "F6"] || win32.HOTKEYS.F6;
+    const startDown = win32.keyDown(startVk);
+    if (startDown && !startWasDown) toggle(cfg);
+    startWasDown = startDown;
+    const panicDown = win32.keyDown(win32.VK_ESCAPE);
+    if (panicDown && !panicWasDown && running) stop();
+    panicWasDown = panicDown;
+  }, 40);
+}
+
+function shutdown() {
+  stop();
+  if (poll) {
+    clearInterval(poll);
+    poll = null;
+  }
+}
+
+module.exports = { start, stop, toggle, status, init, shutdown };

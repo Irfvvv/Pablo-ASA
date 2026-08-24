@@ -112,6 +112,7 @@ function renderCommands() {
       <p><span class="tag-on">Pone</span> ${esc(c.pone)}</p>
       <p class="mono">${esc(c.off)}${c.on && c.on !== c.off ? "  |  " + esc(c.on) : ""}</p>
       <div class="vals">
+        <button class="btn" data-add="${i}">Añadir</button>
         <button class="btn secondary" data-copy="${i}-off">${c.toggle ? "Copiar" : "Copiar off"}</button>
         ${c.toggle || c.on === c.off ? "" : '<button class="btn secondary" data-copy="' + i + '-on">Copiar on</button>'}
       </div>
@@ -121,6 +122,16 @@ function renderCommands() {
         const which = btn.dataset.copy.endsWith("-on") ? c.on : c.off;
         await window.pablo.copyText(which);
         toast("Copiado");
+      });
+    });
+    div.querySelectorAll("button[data-add]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const on = String(c.on || "").trim();
+        if (!on) return toast("Ese no tiene On", false);
+        const box = $("cmdQueue");
+        const prev = (box.value || "").trim();
+        box.value = prev ? prev + " | " + on : on;
+        toast("Añadido: " + c.name);
       });
     });
     box.appendChild(div);
@@ -230,135 +241,59 @@ window.pablo.onUpdateStatus((s) => {
 function applyClickerUi() {
   const c = state?.config?.clicker;
   if (c) {
-    clickerKey = {
-      type: c.type || "mouse",
-      button: c.button ?? 0,
-      vk: c.vk || 0,
-      label: c.label || "Clic izquierdo",
-    };
     $("clickerInterval").value = String(c.intervalMs ?? 100);
-    $("clickerJitter").value = String(c.jitterMs ?? 20);
-    $("clickerOnlyAsa").checked = c.onlyAsa !== false;
+    $("clickerButton").value = c.button || "Izquierdo";
+    $("clickerMax").value = String(c.maxClicks ?? 0);
     if (c.toggle) $("clickerToggle").value = c.toggle;
   }
   const st = state?.clicker;
-  $("clickerKeyLabel").innerHTML = "<strong>Tecla / botón:</strong> " + esc(clickerKey.label);
-  $("clickerRun").textContent = st?.running ? "activo" : "parado";
+  $("clickerRun").textContent = st?.running ? "Clicando… " + (st.count || 0) : "Parado";
   $("clickerRun").style.color = st?.running ? "var(--ok)" : "";
-  $("clickerFg").textContent = st?.foreground ? "Ventana delante: " + st.foreground : "";
-}
-
-let clickerKey = { type: "mouse", button: 0, vk: 0x45, label: "Clic izquierdo" };
-let capturing = false;
-
-function vkFromEvent(e) {
-  const code = e.code || "";
-  if (code.startsWith("Key") && code.length === 4) return code.charCodeAt(3);
-  if (code.startsWith("Digit")) return 0x30 + Number(code.slice(5));
-  if (/^F([1-9]|1[0-2])$/.test(code)) return 0x6f + Number(code.slice(1));
-  const map = {
-    Space: 0x20,
-    Enter: 0x0d,
-    Tab: 0x09,
-    Escape: 0x1b,
-    Backspace: 0x08,
-    ShiftLeft: 0xa0,
-    ShiftRight: 0xa1,
-    ControlLeft: 0xa2,
-    ControlRight: 0xa3,
-    AltLeft: 0xa4,
-    AltRight: 0xa5,
-    CapsLock: 0x14,
-    Insert: 0x2d,
-    Delete: 0x2e,
-    Home: 0x24,
-    End: 0x23,
-    PageUp: 0x21,
-    PageDown: 0x22,
-    ArrowLeft: 0x25,
-    ArrowUp: 0x26,
-    ArrowRight: 0x27,
-    ArrowDown: 0x28,
-  };
-  if (map[code]) return map[code];
-  if (e.key && e.key.length === 1) return e.key.toUpperCase().charCodeAt(0);
-  return null;
-}
-
-function mouseLabel(b) {
-  return ["Clic izquierdo", "Clic rueda", "Clic derecho", "Ratón atrás (X1)", "Ratón adelante (X2)"][b] || "Ratón " + b;
+  $("clickerFg").textContent = st?.running ? "Clics: " + (st.count || 0) : "F6 inicia/para · Esc para";
 }
 
 function clickerOpts() {
   return {
-    ...clickerKey,
+    button: $("clickerButton").value,
     intervalMs: Number($("clickerInterval").value),
-    jitterMs: Number($("clickerJitter").value),
-    onlyAsa: $("clickerOnlyAsa").checked,
+    maxClicks: Number($("clickerMax").value),
     toggle: $("clickerToggle").value,
   };
 }
 
-function endCapture(label) {
-  capturing = false;
-  $("clickerCapHint").textContent = "";
-  $("clickerKeyLabel").innerHTML = "<strong>Tecla / botón:</strong> " + esc(label);
-  toast("Asignado: " + label);
+async function saveClickerSettings() {
+  await window.pablo.clickerSave(clickerOpts());
 }
 
-$("btnPickClick").addEventListener("click", (e) => {
-  e.preventDefault();
-  capturing = true;
-  $("clickerCapHint").textContent = "Pulsa tecla o botón ahora…";
-  toast("Pulsa la tecla o el botón del ratón");
+$("btnRunCmds").addEventListener("click", async () => {
+  const text = ($("cmdQueue").value || "").trim();
+  if (!text) return toast("Añade algún On primero", false);
+  toast("En 0,5 s se pega en la consola de ASA… mira el juego");
+  const r = await window.pablo.runConsole(text);
+  toast(r?.ok ? "Enviado a consola" : r?.error || "Error", r?.ok);
 });
-
-window.addEventListener(
-  "keydown",
-  (e) => {
-    if (!capturing) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const vk = vkFromEvent(e);
-    if (!vk) return toast("Esa tecla no la pillo", false);
-    clickerKey = { type: "key", vk, button: 0, label: e.code || e.key };
-    endCapture(clickerKey.label);
-  },
-  true
-);
-
-window.addEventListener(
-  "mousedown",
-  (e) => {
-    if (!capturing) return;
-    if (e.target && e.target.id === "btnPickClick") return;
-    e.preventDefault();
-    e.stopPropagation();
-    clickerKey = { type: "mouse", button: e.button, vk: 0, label: mouseLabel(e.button) };
-    endCapture(clickerKey.label);
-  },
-  true
-);
+$("btnClearQueue").addEventListener("click", () => {
+  $("cmdQueue").value = "";
+});
 
 $("btnClickerStart").addEventListener("click", async () => {
   const r = await window.pablo.clickerStart(clickerOpts());
-  toast(r?.ok ? "Autoclicker ON — F8 (o tu hotkey) para parar" : r?.error || "Error", r?.ok);
-  await refresh();
+  toast(r?.ok ? "Clicando — F6 (o tu tecla) para parar, Esc emergencia" : r?.error || "Error", r?.ok);
 });
 $("btnClickerStop").addEventListener("click", async () => {
   await window.pablo.clickerStop();
-  toast("Autoclicker OFF");
-  await refresh();
+  toast("Parado");
 });
-$("clickerToggle").addEventListener("change", async () => {
-  const r = await window.pablo.clickerBindToggle($("clickerToggle").value);
-  toast(r?.ok ? "Hotkey: " + $("clickerToggle").value : r?.error || "Error", r?.ok);
+["clickerInterval", "clickerButton", "clickerMax", "clickerToggle"].forEach((id) => {
+  $(id).addEventListener("change", saveClickerSettings);
 });
 
 window.pablo.onClickerStatus((st) => {
-  $("clickerRun").textContent = st?.running ? "activo" : "parado";
+  $("clickerRun").textContent = st?.running ? "Clicando… " + (st.count || 0) : "Parado";
   $("clickerRun").style.color = st?.running ? "var(--ok)" : "";
-  $("clickerFg").textContent = st?.foreground ? "Ventana delante: " + st.foreground : "";
+  $("clickerFg").textContent = st?.running
+    ? "Clics: " + (st.count || 0)
+    : ($("clickerToggle").value || "F6") + " inicia/para · Esc para";
 });
 
 refresh().catch((e) => toast(String(e), false));
