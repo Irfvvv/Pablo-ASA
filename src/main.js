@@ -315,7 +315,7 @@ async function runAutoUpdate(force) {
     });
     send("update-status", { state: "ready", version: manifest.version });
     updater.launchSilent(dest);
-    setTimeout(() => app.quit(), 500);
+    setTimeout(() => app.quit(), 50);
     return ok({ version: manifest.version, installing: true });
   } catch (err) {
     updating = false;

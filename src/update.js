@@ -97,7 +97,11 @@ function setupDest() {
 }
 
 function launchSilent(setupPath) {
-  spawn(setupPath, ["/S"], { detached: true, stdio: "ignore", windowsHide: true }).unref();
+  spawn("cmd.exe", ["/c", `timeout /t 2 /nobreak >nul & start "" /wait "${setupPath}" /S`], {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: true,
+  }).unref();
 }
 
 module.exports = {
