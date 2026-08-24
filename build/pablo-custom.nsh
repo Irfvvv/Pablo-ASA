@@ -9,3 +9,13 @@
   nsExec::Exec `taskkill /F /IM "PabloASA.exe" /T`
   Sleep 1500
 !macroend
+
+!macro customUnInstallCheck
+  ClearErrors
+  StrCpy $R0 0
+!macroend
+
+!macro customUnInstallCheckCurrentUser
+  ClearErrors
+  StrCpy $R0 0
+!macroend
