@@ -6,10 +6,10 @@ El auto-update va por **GitHub Releases** (`Irfvvv/Pablo-ASA`). Tú no tienes qu
 
 ## Tus amigos
 
-1. Instalan **una vez** `PabloASA-Setup-x.y.z.exe` (el de GitHub Releases).
-2. No configuran update. Al abrir, la app mira GitHub y se actualiza.
+1. Instalan **una vez** `Pablo ASA Setup.exe` (como `Pablo ARK App Setup.exe`).
+2. Luego la app se actualiza sola al abrirla. No hace falta otro Setup.
 
-El repo tiene que ser **público**. Si es privado, el update pide login y a tus amigos no les vale.
+El repo tiene que ser **público**.
 
 ## FOV
 

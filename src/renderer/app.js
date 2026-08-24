@@ -138,7 +138,7 @@ function paint() {
     : `<span class="bad">Ruta no válida</span><div class="mono">${esc(state.config?.asaPath || "—")}</div>`;
   if (!state.packaged) {
     $("updStatus").textContent =
-      "Estás en npm start. El auto-update de verdad es el instalador (Abrir instalador). Este modo solo consulta GitHub.";
+      "Estás en npm start. El auto-update es el acceso directo Pablo ASA (el Setup de una vez).";
   }
   $("fovInput").value = String(state.fov ?? 120);
   fovHint($("fovInput").value);
@@ -213,25 +213,19 @@ $("btnUpdate").addEventListener("click", async () => {
   if (!r?.ok) toast(r?.error || "No se pudo buscar", false);
   else toast(r.message || ("GitHub: v" + (r.version || "—")));
 });
-$("btnInstall").addEventListener("click", () => window.pablo.installUpdate());
-$("btnSetupExe").addEventListener("click", async () => {
-  const r = await window.pablo.openSetup();
-  toast(r?.ok ? "Abriendo instalador…" : r?.error || "No hay Setup", r?.ok);
-});
 
 window.pablo.onUpdateStatus((s) => {
   const map = {
-    checking: "Buscando update en GitHub…",
-    available: "Hay update " + (s.version || "") + " — se descarga solo",
+    checking: "Buscando actualización…",
+    available: "Hay v" + (s.version || "") + " — descargando e instalando sola",
     current: s.message || "Estás al día",
     downloading: "Descargando " + Math.round(s.percent || 0) + "%",
-    ready: "Update " + (s.version || "") + " listo. Instalar y reiniciar.",
+    ready: "Instalando v" + (s.version || "") + "…",
     error: s.message || "Error de update",
   };
   const msg = map[s?.state] || s?.message || "—";
   $("updateLabel").textContent = "Update: " + (s?.state || "—");
   $("updStatus").textContent = msg;
-  if (s?.state === "ready") $("btnInstall").classList.remove("hidden");
 });
 
 function applyClickerUi() {

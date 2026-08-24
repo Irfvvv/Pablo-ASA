@@ -5,6 +5,7 @@ const { autoUpdater } = require("electron-updater");
 const asa = require("./asa");
 const { GROUPS, COMMANDS } = require("./commands");
 const clicker = require("./clicker");
+const updater = require("./update");
 
 const UPDATE_FEED = {
   provider: "github",
@@ -61,7 +62,7 @@ function releaseUrl() {
 }
 
 function localSetupPath() {
-  const names = [`PabloASA-Setup-${app.getVersion()}.exe`, "PabloASA-Setup-1.0.0.exe"];
+  const names = ["Pablo ASA Setup.exe", `PabloASA-Setup-${app.getVersion()}.exe`];
   const dirs = [path.join(process.cwd(), "dist"), path.join(app.getAppPath(), "dist")];
   for (const dir of dirs) {
     for (const name of names) {
@@ -70,19 +71,6 @@ function localSetupPath() {
     }
   }
   return "";
-}
-
-async function fetchLatestRelease() {
-  const res = await fetch(`https://api.github.com/repos/${UPDATE_FEED.owner}/${UPDATE_FEED.repo}/releases/latest`, {
-    headers: { "User-Agent": "Pablo-ASA", Accept: "application/vnd.github+json" },
-  });
-  if (res.status === 404) return { missing: true };
-  if (!res.ok) throw new Error("GitHub " + res.status);
-  const data = await res.json();
-  return {
-    version: String(data.tag_name || data.name || "").replace(/^v/i, ""),
-    url: data.html_url || releaseUrl(),
-  };
 }
 
 function configureUpdater() {
@@ -115,8 +103,8 @@ app.whenReady().then(() => {
   if (app.isPackaged) {
     configureUpdater();
     setTimeout(() => {
-      autoUpdater.checkForUpdates().catch(() => {});
-    }, 2500);
+      runAutoUpdate(false).catch(() => {});
+    }, 1600);
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -274,39 +262,70 @@ handle("open-external", (url) => {
   return ok();
 });
 
-handle("check-updates", async () => {
-  send("update-status", { state: "checking" });
-  let latest = null;
-  try {
-    latest = await fetchLatestRelease();
-  } catch (err) {
-    send("update-status", { state: "error", message: friendlyUpdateError(err) });
-    return fail(friendlyUpdateError(err));
-  }
+let updating = false;
 
-  if (latest.missing) {
-    const msg =
-      "Aún no hay releases en GitHub (Irfvvv/Pablo-ASA). Cuando el repo esté público, el instalador se actualiza solo. Este npm start no instala updates.";
+async function runAutoUpdate(force) {
+  if (updating) return { ok: true, busy: true };
+  send("update-status", { state: "checking" });
+  let manifest;
+  try {
+    manifest = await updater.fetchManifest();
+  } catch (err) {
+    if (app.isPackaged) {
+      try {
+        configureUpdater();
+        await autoUpdater.checkForUpdates();
+        return ok({ packaged: true });
+      } catch (fallbackErr) {
+        const msg = friendlyUpdateError(fallbackErr);
+        send("update-status", { state: "error", message: msg });
+        return fail(msg);
+      }
+    }
+    const msg = friendlyUpdateError(err);
     send("update-status", { state: "error", message: msg });
     return fail(msg);
   }
 
-  if (app.isPackaged) {
-    configureUpdater();
-    try {
-      const r = await autoUpdater.checkForUpdates();
-      return ok({ version: r?.updateInfo?.version || latest.version, packaged: true });
-    } catch (err) {
-      const msg = friendlyUpdateError(err);
-      send("update-status", { state: "error", message: msg });
-      return fail(msg);
-    }
+  if (manifest.missing) {
+    const msg = "Aún no hay update.json en GitHub Releases.";
+    send("update-status", { state: "error", message: msg });
+    return fail(msg);
   }
 
-  const msg = `GitHub tiene v${latest.version}. npm start no se autoinstala: usa el Setup (PabloASA-Setup) y a partir de ahí sí se actualiza solo.`;
-  send("update-status", { state: "current", message: msg, version: latest.version });
-  return ok({ version: latest.version, packaged: false, url: latest.url, message: msg });
-});
+  if (!updater.isNewer(manifest.version, app.getVersion())) {
+    const msg = force ? "Ya estás en la última versión (v" + app.getVersion() + ")" : "Estás al día";
+    send("update-status", { state: "current", message: msg, version: manifest.version });
+    return ok({ version: manifest.version, current: true, message: msg });
+  }
+
+  if (!app.isPackaged) {
+    const msg = "Hay v" + manifest.version + ". npm start no se autoinstala: usa el acceso directo Pablo ASA.";
+    send("update-status", { state: "current", message: msg, version: manifest.version });
+    return ok({ version: manifest.version, packaged: false, message: msg });
+  }
+
+  updating = true;
+  send("update-status", { state: "available", version: manifest.version });
+  try {
+    const dest = updater.setupDest();
+    await updater.downloadInstaller(manifest.url, dest, manifest.sha256, (done, total) => {
+      const percent = total ? (done / total) * 100 : 0;
+      send("update-status", { state: "downloading", percent, version: manifest.version });
+    });
+    send("update-status", { state: "ready", version: manifest.version });
+    updater.launchSilent(dest);
+    setTimeout(() => app.quit(), 500);
+    return ok({ version: manifest.version, installing: true });
+  } catch (err) {
+    updating = false;
+    const msg = friendlyUpdateError(err);
+    send("update-status", { state: "error", message: msg });
+    return fail(msg);
+  }
+}
+
+handle("check-updates", () => runAutoUpdate(true));
 
 handle("open-releases", () => {
   shell.openExternal(releaseUrl());
