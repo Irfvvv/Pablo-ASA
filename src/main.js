@@ -25,6 +25,7 @@ function defaultConfig() {
     asaPath: asa.detectAsaPath(),
     setupDone: false,
     lastFov: 170,
+    cmdQueue: "",
     clicker: {
       button: "Izquierdo",
       intervalMs: 100,

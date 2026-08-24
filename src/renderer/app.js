@@ -112,7 +112,8 @@ function renderCommands() {
       <p><span class="tag-on">Pone</span> ${esc(c.pone)}</p>
       <p class="mono">${esc(c.off)}${c.on && c.on !== c.off ? "  |  " + esc(c.on) : ""}</p>
       <div class="vals">
-        <button class="btn" data-add="${i}">Añadir</button>
+        <button class="btn" data-add-off="${i}">Quitar (FPS)</button>
+        ${c.toggle || !c.on || c.on === c.off ? "" : '<button class="btn secondary" data-add-on="' + i + '">Poner</button>'}
         <button class="btn secondary" data-copy="${i}-off">${c.toggle ? "Copiar" : "Copiar off"}</button>
         ${c.toggle || c.on === c.off ? "" : '<button class="btn secondary" data-copy="' + i + '-on">Copiar on</button>'}
       </div>
@@ -124,15 +125,11 @@ function renderCommands() {
         toast("Copiado");
       });
     });
-    div.querySelectorAll("button[data-add]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const on = String(c.on || "").trim();
-        if (!on) return toast("Ese no tiene On", false);
-        const box = $("cmdQueue");
-        const prev = (box.value || "").trim();
-        box.value = prev ? prev + " | " + on : on;
-        toast("Añadido: " + c.name);
-      });
+    div.querySelectorAll("button[data-add-off]").forEach((btn) => {
+      btn.addEventListener("click", () => addToQueue(c.off, c.name + " (quitar / más FPS)"));
+    });
+    div.querySelectorAll("button[data-add-on]").forEach((btn) => {
+      btn.addEventListener("click", () => addToQueue(c.on, c.name + " (poner)"));
     });
     box.appendChild(div);
   });
@@ -156,6 +153,10 @@ function paint() {
   fillGroups();
   renderCommands();
   applyClickerUi();
+  if ($("cmdQueue") && !$("cmdQueue").dataset.loaded) {
+    $("cmdQueue").value = state.config?.cmdQueue || "";
+    $("cmdQueue").dataset.loaded = "1";
+  }
   if (!state.config?.setupDone) showTab("setup");
 }
 
@@ -265,16 +266,36 @@ async function saveClickerSettings() {
   await window.pablo.clickerSave(clickerOpts());
 }
 
+function addToQueue(cmd, label) {
+  const line = String(cmd || "").trim();
+  if (!line) return toast("Ese no tiene comando", false);
+  const box = $("cmdQueue");
+  const prev = (box.value || "").trim();
+  box.value = prev ? prev + " | " + line : line;
+  saveCmdQueue();
+  toast("Añadido: " + label);
+}
+
+async function saveCmdQueue() {
+  try {
+    await window.pablo.saveConfig({ cmdQueue: $("cmdQueue").value || "" });
+  } catch {
+    /* ignore */
+  }
+}
+
 $("btnRunCmds").addEventListener("click", async () => {
   const text = ($("cmdQueue").value || "").trim();
-  if (!text) return toast("Añade algún On primero", false);
+  if (!text) return toast("Añade un Quitar (FPS) o un Poner primero", false);
   toast("En 0,5 s se pega en la consola de ASA… mira el juego");
   const r = await window.pablo.runConsole(text);
   toast(r?.ok ? "Enviado a consola" : r?.error || "Error", r?.ok);
 });
 $("btnClearQueue").addEventListener("click", () => {
   $("cmdQueue").value = "";
+  saveCmdQueue();
 });
+$("cmdQueue").addEventListener("change", saveCmdQueue);
 
 $("btnClickerStart").addEventListener("click", async () => {
   const r = await window.pablo.clickerStart(clickerOpts());
