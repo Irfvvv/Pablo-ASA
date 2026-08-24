@@ -7,6 +7,10 @@ const { GROUPS, COMMANDS } = require("./commands");
 const clicker = require("./clicker");
 const updater = require("./update");
 
+app.commandLine.appendSwitch("disable-background-timer-throttling");
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+
 const UPDATE_FEED = {
   provider: "github",
   owner: "Irfvvv",
@@ -31,6 +35,7 @@ function defaultConfig() {
       intervalMs: 100,
       maxClicks: 0,
       toggle: "F6",
+      toggleVk: 0x75,
     },
   };
 }
@@ -40,10 +45,11 @@ function loadConfig() {
     const saved = JSON.parse(fs.readFileSync(configPath(), "utf8"));
     const base = defaultConfig();
     const clickerCfg = { ...base.clicker, ...(saved.clicker || {}) };
-    if (!["Izquierdo", "Derecho", "Central"].includes(clickerCfg.button)) {
+    if (!["Izquierdo", "Derecho", "Central", "Atrás", "Adelante"].includes(clickerCfg.button)) {
       clickerCfg.button = "Izquierdo";
     }
     if (!clickerCfg.toggle) clickerCfg.toggle = "F6";
+    if (!clickerCfg.toggleVk) clickerCfg.toggleVk = 0x75;
     return { ...base, ...saved, clicker: clickerCfg };
   } catch {
     return defaultConfig();
@@ -106,7 +112,15 @@ app.whenReady().then(() => {
   createWindow();
   clicker.init(
     (st) => send("clicker-status", st),
-    () => (loadConfig().clicker || {})
+    () => (loadConfig().clicker || {}),
+    (hit) => {
+      const cfg = loadConfig();
+      const next = { ...cfg.clicker, toggle: hit.name, toggleVk: hit.vk };
+      currentCfg = { ...cfg, clicker: next };
+      saveConfig(currentCfg);
+      send("clicker-bound", next);
+      send("clicker-status", clicker.status());
+    }
   );
   if (app.isPackaged) {
     configureUpdater();
@@ -383,4 +397,9 @@ handle("clicker-save", (opts) => {
   currentCfg = { ...cfg, clicker: next };
   saveConfig(currentCfg);
   return ok(next);
+});
+
+handle("clicker-bind", () => {
+  clicker.beginBind();
+  return ok({ capturing: true });
 });

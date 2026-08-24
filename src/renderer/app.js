@@ -245,20 +245,29 @@ function applyClickerUi() {
     $("clickerInterval").value = String(c.intervalMs ?? 100);
     $("clickerButton").value = c.button || "Izquierdo";
     $("clickerMax").value = String(c.maxClicks ?? 0);
-    if (c.toggle) $("clickerToggle").value = c.toggle;
+    clickerBind.toggle = c.toggle || "F6";
+    clickerBind.toggleVk = c.toggleVk || 0x75;
+    $("clickerBindLabel").textContent = clickerBind.toggle;
   }
   const st = state?.clicker;
   $("clickerRun").textContent = st?.running ? "Clicando… " + (st.count || 0) : "Parado";
   $("clickerRun").style.color = st?.running ? "var(--ok)" : "";
-  $("clickerFg").textContent = st?.running ? "Clics: " + (st.count || 0) : "F6 inicia/para · Esc para";
+  $("clickerFg").textContent = st?.capturing
+    ? "Pulsa una tecla o un botón del ratón…"
+    : st?.running
+      ? "Clics: " + (st.count || 0)
+      : clickerBind.toggle + " inicia/para · Esc para";
 }
+
+const clickerBind = { toggle: "F6", toggleVk: 0x75 };
 
 function clickerOpts() {
   return {
     button: $("clickerButton").value,
     intervalMs: Number($("clickerInterval").value),
     maxClicks: Number($("clickerMax").value),
-    toggle: $("clickerToggle").value,
+    toggle: clickerBind.toggle,
+    toggleVk: clickerBind.toggleVk,
   };
 }
 
@@ -299,22 +308,36 @@ $("cmdQueue").addEventListener("change", saveCmdQueue);
 
 $("btnClickerStart").addEventListener("click", async () => {
   const r = await window.pablo.clickerStart(clickerOpts());
-  toast(r?.ok ? "Clicando — F6 (o tu tecla) para parar, Esc emergencia" : r?.error || "Error", r?.ok);
+  toast(r?.ok ? "Clicando — " + clickerBind.toggle + " para parar, Esc emergencia" : r?.error || "Error", r?.ok);
 });
 $("btnClickerStop").addEventListener("click", async () => {
   await window.pablo.clickerStop();
   toast("Parado");
 });
-["clickerInterval", "clickerButton", "clickerMax", "clickerToggle"].forEach((id) => {
+$("btnClickerBind").addEventListener("click", async () => {
+  await window.pablo.clickerBind();
+  $("clickerFg").textContent = "Pulsa una tecla o un botón del ratón…";
+  toast("Pulsa tecla o botón del ratón");
+});
+["clickerInterval", "clickerButton", "clickerMax"].forEach((id) => {
   $(id).addEventListener("change", saveClickerSettings);
+});
+
+window.pablo.onClickerBound((cfg) => {
+  clickerBind.toggle = cfg.toggle;
+  clickerBind.toggleVk = cfg.toggleVk;
+  $("clickerBindLabel").textContent = cfg.toggle;
+  toast("Bind: " + cfg.toggle);
 });
 
 window.pablo.onClickerStatus((st) => {
   $("clickerRun").textContent = st?.running ? "Clicando… " + (st.count || 0) : "Parado";
   $("clickerRun").style.color = st?.running ? "var(--ok)" : "";
-  $("clickerFg").textContent = st?.running
-    ? "Clics: " + (st.count || 0)
-    : ($("clickerToggle").value || "F6") + " inicia/para · Esc para";
+  $("clickerFg").textContent = st?.capturing
+    ? "Pulsa una tecla o un botón del ratón…"
+    : st?.running
+      ? "Clics: " + (st.count || 0)
+      : clickerBind.toggle + " inicia/para · Esc para";
 });
 
 refresh().catch((e) => toast(String(e), false));

@@ -22,11 +22,15 @@ contextBridge.exposeInMainWorld("pablo", {
   clickerStop: () => ipcRenderer.invoke("clicker-stop"),
   clickerStatus: () => ipcRenderer.invoke("clicker-status"),
   clickerSave: (opts) => ipcRenderer.invoke("clicker-save", opts),
+  clickerBind: () => ipcRenderer.invoke("clicker-bind"),
   runConsole: (text) => ipcRenderer.invoke("run-console", text),
   onUpdateStatus: (cb) => {
     ipcRenderer.on("update-status", (_e, data) => cb(data));
   },
   onClickerStatus: (cb) => {
     ipcRenderer.on("clicker-status", (_e, data) => cb(data));
+  },
+  onClickerBound: (cb) => {
+    ipcRenderer.on("clicker-bound", (_e, data) => cb(data));
   },
 });
