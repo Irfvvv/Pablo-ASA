@@ -19,7 +19,6 @@
         <button data-tab="execs">Execs</button>
         <button data-tab="cmds">Commands</button>
         <button data-tab="clicker">Autoclicker</button>
-        <button data-tab="macros">Dinos / Torretas</button>
         <button data-tab="setup">Setup</button>
       </nav>
       <div class="side-foot" id="updateLabel">Update: —</div>
@@ -141,70 +140,6 @@
             <span class="pill" id="clickerRun">Parado</span>
           </div>
           <p class="mono" id="clickerFg" style="margin-top:10px"></p>
-        </div>
-      </section>
-
-      <section id="tab-macros" class="hidden">
-        <h2>Dinos / Torretas</h2>
-        <p class="lead">SendInput, como el autoclicker. No lee el juego: tú apuntas y el bind pega el nombre o transfiere la munición. Esc cancela a mitad.</p>
-
-        <div class="card" style="margin-bottom:14px">
-          <h3>Nombrar</h3>
-          <p>Mira el dino o la torreta, <span class="mono">F</span> para abrir inventario, clic en el nombre de arriba, pulsa el bind. Pega el siguiente número y lo sube.</p>
-          <label class="check"><input type="checkbox" id="macroNamerOn" checked /> Activar nombrar</label>
-          <div class="row" style="margin-top:8px">
-            <button class="btn secondary preset-btn" data-preset="dinos">Dinos</button>
-            <button class="btn secondary preset-btn" data-preset="turrets">Torretas</button>
-          </div>
-          <label>Prefijo</label>
-          <input id="macroPrefix" placeholder="Anky" />
-          <div class="row">
-            <div style="flex:1;min-width:120px">
-              <label>Número</label>
-              <input id="macroNumber" type="number" min="1" max="9999" step="1" value="1" />
-            </div>
-            <div style="flex:1;min-width:120px">
-              <label>Ceros (0 = Anky 1, 2 = Anky 01)</label>
-              <input id="macroPad" type="number" min="0" max="4" step="1" value="0" />
-            </div>
-            <div style="flex:1;min-width:120px">
-              <label>Sufijo (opcional)</label>
-              <input id="macroSuffix" placeholder="" />
-            </div>
-          </div>
-          <label>Bind nombrar</label>
-          <div class="row">
-            <span class="pill" id="macroNamerBind">F8</span>
-            <button class="btn" id="btnMacroNamerBind">Bind</button>
-            <button class="btn secondary" id="btnMacroReset">Reset número a 1</button>
-          </div>
-          <p class="mono" id="macroNext" style="margin-top:10px">Siguiente: Anky 1</p>
-        </div>
-
-        <div class="card">
-          <h3>Refill torretas</h3>
-          <p>Munición en tu inventario. Una vez: abre una torreta y <b>Graba slot</b> haciendo clic en los bullets. Luego mira cada torreta y pulsa el bind: abre, transfiere, cierra.</p>
-          <label class="check"><input type="checkbox" id="macroRefillOn" checked /> Activar refill</label>
-          <label>Tecla para abrir inventario</label>
-          <select id="macroOpenKey" style="max-width:200px">
-            <option value="F" selected>F</option>
-            <option value="E">E</option>
-            <option value="Ninguna">Ninguna (ya está abierto)</option>
-          </select>
-          <label class="check"><input type="checkbox" id="macroOpenFirst" checked /> Pulsar esa tecla al refill</label>
-          <label>Transferencias (T)</label>
-          <input id="macroTransfers" type="number" min="1" max="12" step="1" value="2" style="max-width:160px" />
-          <label>Espera al abrir (ms)</label>
-          <input id="macroDelay" type="number" min="40" max="800" step="10" value="180" style="max-width:160px" />
-          <label class="check"><input type="checkbox" id="macroCloseAfter" checked /> Cerrar con Esc al terminar</label>
-          <label>Bind refill</label>
-          <div class="row">
-            <span class="pill" id="macroRefillBind">F9</span>
-            <button class="btn" id="btnMacroRefillBind">Bind</button>
-            <button class="btn secondary" id="btnMacroAmmo">Grabar slot munición</button>
-          </div>
-          <p class="mono" id="macroAmmo" style="margin-top:10px">Slot munición: no grabado</p>
-          <p class="mono" id="macroMsg"></p>
         </div>
       </section>
 
