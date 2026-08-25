@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld("pablo", {
   clickerSave: (opts) => ipcRenderer.invoke("clicker-save", opts),
   clickerBind: () => ipcRenderer.invoke("clicker-bind"),
   runConsole: (text) => ipcRenderer.invoke("run-console", text),
+  macrosSave: (patch) => ipcRenderer.invoke("macros-save", patch),
+  macrosBind: (which) => ipcRenderer.invoke("macros-bind", which),
+  macrosAmmo: () => ipcRenderer.invoke("macros-ammo"),
+  macrosReset: (presetId) => ipcRenderer.invoke("macros-reset", presetId),
   onUpdateStatus: (cb) => {
     ipcRenderer.on("update-status", (_e, data) => cb(data));
   },
@@ -32,5 +36,11 @@ contextBridge.exposeInMainWorld("pablo", {
   },
   onClickerBound: (cb) => {
     ipcRenderer.on("clicker-bound", (_e, data) => cb(data));
+  },
+  onMacrosStatus: (cb) => {
+    ipcRenderer.on("macros-status", (_e, data) => cb(data));
+  },
+  onMacrosBound: (cb) => {
+    ipcRenderer.on("macros-bound", (_e, data) => cb(data));
   },
 });

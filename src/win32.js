@@ -18,7 +18,9 @@ const VK_MBUTTON = 0x04;
 const VK_XBUTTON1 = 0x05;
 const VK_XBUTTON2 = 0x06;
 const VK_CONTROL = 0x11;
+const VK_A = 0x41;
 const VK_V = 0x56;
+const VK_T = 0x54;
 const VK_RETURN = 0x0d;
 const VK_OEM_3 = 0xc0;
 const VK_ESCAPE = 0x1b;
@@ -62,7 +64,14 @@ const Input = koffi.struct("Input", {
   mi: MouseInput,
 });
 
+const Point = koffi.struct("Point", {
+  x: "int32",
+  y: "int32",
+});
+
 const user32 = koffi.load("user32.dll");
+const GetCursorPos = user32.func("__stdcall", "GetCursorPos", "int32", [koffi.out(koffi.pointer(Point))]);
+const SetCursorPos = user32.func("__stdcall", "SetCursorPos", "int32", ["int32", "int32"]);
 const mouse_event = user32.func("__stdcall", "mouse_event", "void", [
   "uint32",
   "int32",
@@ -149,6 +158,54 @@ function focusAsa() {
   return r.status === 0;
 }
 
+function chordCtrl(vk, holdMs = 25) {
+  const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
+  keybd_event(VK_CONTROL, ctrlScan, 0, 0);
+  pressVk(vk, holdMs);
+  keybd_event(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP, 0);
+}
+
+function cursorPos() {
+  const pt = { x: 0, y: 0 };
+  if (!GetCursorPos(pt)) return null;
+  return { x: pt.x, y: pt.y };
+}
+
+function moveCursor(x, y) {
+  SetCursorPos(Math.round(x), Math.round(y));
+}
+
+function clickAt(x, y, button = "Izquierdo") {
+  moveCursor(x, y);
+  const hold = Date.now() + 8;
+  while (Date.now() < hold) {
+    /* settle */
+  }
+  clickOnce(button);
+}
+
+function vkOfKey(name) {
+  const raw = String(name || "").trim();
+  if (!raw || raw === "Ninguna" || raw === "None") return 0;
+  if (HOTKEYS[raw]) return HOTKEYS[raw];
+  const up = raw.toUpperCase();
+  if (HOTKEYS[up]) return HOTKEYS[up];
+  return 0;
+}
+
+async function pasteName(text) {
+  const payload = String(text || "").slice(0, 32);
+  if (!payload) throw new Error("Nombre vacío");
+  const { clipboard } = require("electron");
+  clipboard.writeText(payload);
+  await sleep(40);
+  chordCtrl(VK_A, 25);
+  await sleep(25);
+  chordCtrl(VK_V, 25);
+  await sleep(40);
+  pressVk(VK_RETURN, 30);
+}
+
 async function sendToConsole(text) {
   const payload = String(text || "").trim();
   if (!payload) throw new Error("No hay comandos que enviar");
@@ -159,9 +216,7 @@ async function sendToConsole(text) {
   await sleep(120);
   pressVk(VK_OEM_3, 40);
   await sleep(160);
-  keybd_event(VK_CONTROL, 0, 0, 0);
-  pressVk(VK_V, 40);
-  keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+  chordCtrl(VK_V, 40);
   await sleep(80);
   pressVk(VK_RETURN, 40);
 }
@@ -170,12 +225,18 @@ module.exports = {
   CLICKS,
   HOTKEYS,
   VK_ESCAPE,
+  VK_T,
   keyDown,
   clickOnce,
+  clickAt,
+  cursorPos,
+  moveCursor,
   toggleVkOf,
   firstPressedBind,
   pressVk,
+  vkOfKey,
   focusAsa,
+  pasteName,
   sendToConsole,
   sleep,
 };

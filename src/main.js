@@ -5,6 +5,7 @@ const { autoUpdater } = require("electron-updater");
 const asa = require("./asa");
 const { GROUPS, COMMANDS } = require("./commands");
 const clicker = require("./clicker");
+const macros = require("./macros");
 const updater = require("./update");
 
 app.commandLine.appendSwitch("disable-background-timer-throttling");
@@ -37,6 +38,7 @@ function defaultConfig() {
       toggle: "F6",
       toggleVk: 0x75,
     },
+    macros: macros.defaultMacros(),
   };
 }
 
@@ -50,7 +52,8 @@ function loadConfig() {
     }
     if (!clickerCfg.toggle) clickerCfg.toggle = "F6";
     if (!clickerCfg.toggleVk) clickerCfg.toggleVk = 0x75;
-    return { ...base, ...saved, clicker: clickerCfg };
+    const macrosCfg = macros.mergeMacros(saved.macros);
+    return { ...base, ...saved, clicker: clickerCfg, macros: macrosCfg };
   } catch {
     return defaultConfig();
   }
@@ -122,6 +125,30 @@ app.whenReady().then(() => {
       send("clicker-status", clicker.status());
     }
   );
+  macros.init(
+    (st) => send("macros-status", st),
+    () => macros.mergeMacros(loadConfig().macros),
+    (which, hit) => {
+      const cfg = loadConfig();
+      const next = macros.mergeMacros(cfg.macros);
+      if (which === "refill") {
+        next.refillToggle = hit.name;
+        next.refillVk = hit.vk;
+      } else {
+        next.namerToggle = hit.name;
+        next.namerVk = hit.vk;
+      }
+      currentCfg = { ...cfg, macros: next };
+      saveConfig(currentCfg);
+      send("macros-bound", { which, ...next });
+      send("macros-status", macros.status());
+    },
+    (next) => {
+      const cfg = loadConfig();
+      currentCfg = { ...cfg, macros: macros.mergeMacros(next) };
+      saveConfig(currentCfg);
+    }
+  );
   if (app.isPackaged) {
     configureUpdater();
     setTimeout(() => {
@@ -135,11 +162,13 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   clicker.shutdown();
+  macros.shutdown();
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("will-quit", () => {
   clicker.shutdown();
+  macros.shutdown();
 });
 
 autoUpdater.on("checking-for-update", () => send("update-status", { state: "checking" }));
@@ -211,6 +240,7 @@ handle("get-state", () => {
     setupExe: localSetupPath(),
     releasesUrl: releaseUrl(),
     clicker: clicker.status(),
+    macros: macros.status(),
   };
 });
 
@@ -402,4 +432,37 @@ handle("clicker-save", (opts) => {
 handle("clicker-bind", () => {
   clicker.beginBind();
   return ok({ capturing: true });
+});
+
+handle("macros-save", (patch) => {
+  const cfg = loadConfig();
+  const next = macros.mergeMacros({
+    ...cfg.macros,
+    ...patch,
+    presets: { ...cfg.macros.presets, ...(patch && patch.presets) },
+  });
+  macros.persist(next);
+  send("macros-status", macros.status());
+  return ok(next);
+});
+
+handle("macros-bind", (which) => {
+  macros.beginBind(which);
+  return ok({ capturing: true });
+});
+
+handle("macros-ammo", () => {
+  macros.beginBind("ammo");
+  return ok({ capturing: true });
+});
+
+handle("macros-reset", (presetId) => {
+  const cfg = loadConfig();
+  const id = presetId === "turrets" ? "turrets" : presetId === "dinos" ? "dinos" : cfg.macros.activePreset || "dinos";
+  const presets = { ...cfg.macros.presets };
+  presets[id] = { ...presets[id], number: 1 };
+  const next = macros.mergeMacros({ ...cfg.macros, presets });
+  macros.persist(next);
+  send("macros-status", macros.status());
+  return ok(next);
 });

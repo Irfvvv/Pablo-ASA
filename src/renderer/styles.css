@@ -59,6 +59,11 @@ html, body {
   background: #2a2216;
   color: var(--accent);
 }
+.preset-btn.active {
+  background: #2a2216;
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .side-foot {
   margin-top: auto;
   color: var(--muted);

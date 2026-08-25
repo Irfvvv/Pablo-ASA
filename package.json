@@ -1,8 +1,8 @@
 {
   "name": "pablo-asa",
   "productName": "Pablo ASA",
-  "version": "1.0.14",
-  "description": "FOV, execs, autoclicker y comandos para ARK Survival Ascended. Auto-update por GitHub.",
+  "version": "1.0.15",
+  "description": "FOV, execs, autoclicker, nombrar dinos/torretas y comandos para ARK Survival Ascended. Auto-update por GitHub.",
   "main": "src/main.js",
   "author": "Pablo",
   "license": "MIT",

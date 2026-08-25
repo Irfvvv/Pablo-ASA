@@ -153,6 +153,7 @@ function paint() {
   fillGroups();
   renderCommands();
   applyClickerUi();
+  applyMacrosUi();
   if ($("cmdQueue") && !$("cmdQueue").dataset.loaded) {
     $("cmdQueue").value = state.config?.cmdQueue || "";
     $("cmdQueue").dataset.loaded = "1";
@@ -338,6 +339,160 @@ window.pablo.onClickerStatus((st) => {
     : st?.running
       ? "Clics: " + (st.count || 0)
       : clickerBind.toggle + " inicia/para · Esc para";
+});
+
+let macrosActive = "dinos";
+
+function currentMacroPreset(cfg) {
+  const macrosCfg = cfg || state?.config?.macros;
+  const id = macrosActive || macrosCfg?.activePreset || "dinos";
+  return macrosCfg?.presets?.[id] || { prefix: "", suffix: "", number: 1, pad: 0 };
+}
+
+function macroPreviewText(p) {
+  const n = Math.max(1, Math.round(Number(p.number) || 1));
+  const pad = Math.max(0, Math.round(Number(p.pad) || 0));
+  const num = pad ? String(n).padStart(pad, "0") : String(n);
+  return [String(p.prefix || "").trim(), num, String(p.suffix || "").trim()].filter(Boolean).join(" ");
+}
+
+function applyMacrosUi() {
+  const m = state?.config?.macros;
+  if (!m) return;
+  macrosActive = m.activePreset || macrosActive || "dinos";
+  $("macroNamerOn").checked = m.namerOn !== false;
+  $("macroRefillOn").checked = m.refillOn !== false;
+  $("macroNamerBind").textContent = m.namerToggle || "F8";
+  $("macroRefillBind").textContent = m.refillToggle || "F9";
+  $("macroOpenKey").value = m.openKey || "F";
+  $("macroOpenFirst").checked = m.openFirst !== false;
+  $("macroTransfers").value = String(m.transferCount ?? 2);
+  $("macroDelay").value = String(m.delayMs ?? 180);
+  $("macroCloseAfter").checked = m.closeAfter !== false;
+  document.querySelectorAll(".preset-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.preset === macrosActive);
+  });
+  const p = currentMacroPreset(m);
+  $("macroPrefix").value = p.prefix || "";
+  $("macroNumber").value = String(p.number ?? 1);
+  $("macroPad").value = String(p.pad ?? 0);
+  $("macroSuffix").value = p.suffix || "";
+  $("macroNext").textContent = "Siguiente: " + macroPreviewText(p);
+  const ammo = m.ammoSet ? m.ammoX + ", " + m.ammoY : "no grabado";
+  $("macroAmmo").textContent = "Slot munición: " + ammo;
+  const st = state?.macros;
+  if (st?.capturing) $("macroMsg").textContent = st.lastMsg || "Pulsa…";
+  else if (st?.lastMsg) $("macroMsg").textContent = st.lastMsg;
+}
+
+function macrosPatchFromUi() {
+  const p = {
+    prefix: $("macroPrefix").value,
+    suffix: $("macroSuffix").value,
+    number: Number($("macroNumber").value) || 1,
+    pad: Number($("macroPad").value) || 0,
+  };
+  $("macroNext").textContent = "Siguiente: " + macroPreviewText(p);
+  return {
+    namerOn: $("macroNamerOn").checked,
+    refillOn: $("macroRefillOn").checked,
+    activePreset: macrosActive,
+    openKey: $("macroOpenKey").value,
+    openFirst: $("macroOpenFirst").checked,
+    transferCount: Number($("macroTransfers").value) || 2,
+    delayMs: Number($("macroDelay").value) || 180,
+    closeAfter: $("macroCloseAfter").checked,
+    presets: {
+      [macrosActive]: p,
+    },
+  };
+}
+
+async function saveMacrosSettings() {
+  await window.pablo.macrosSave(macrosPatchFromUi());
+}
+
+document.querySelectorAll(".preset-btn").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    await saveMacrosSettings();
+    macrosActive = btn.dataset.preset;
+    await window.pablo.macrosSave({ activePreset: macrosActive });
+    state = await window.pablo.getState();
+    applyMacrosUi();
+  });
+});
+
+[
+  "macroNamerOn",
+  "macroRefillOn",
+  "macroPrefix",
+  "macroNumber",
+  "macroPad",
+  "macroSuffix",
+  "macroOpenKey",
+  "macroOpenFirst",
+  "macroTransfers",
+  "macroDelay",
+  "macroCloseAfter",
+].forEach((id) => {
+  $(id).addEventListener("change", saveMacrosSettings);
+  if ($(id).tagName === "INPUT" && $(id).type !== "checkbox") {
+    $(id).addEventListener("input", () => {
+      const p = {
+        prefix: $("macroPrefix").value,
+        suffix: $("macroSuffix").value,
+        number: Number($("macroNumber").value) || 1,
+        pad: Number($("macroPad").value) || 0,
+      };
+      $("macroNext").textContent = "Siguiente: " + macroPreviewText(p);
+    });
+  }
+});
+
+$("btnMacroNamerBind").addEventListener("click", async () => {
+  await window.pablo.macrosBind("namer");
+  $("macroMsg").textContent = "Pulsa tecla o botón del ratón para nombrar…";
+  toast("Bind nombrar: pulsa tecla o ratón");
+});
+$("btnMacroRefillBind").addEventListener("click", async () => {
+  await window.pablo.macrosBind("refill");
+  $("macroMsg").textContent = "Pulsa tecla o botón del ratón para refill…";
+  toast("Bind refill: pulsa tecla o ratón");
+});
+$("btnMacroAmmo").addEventListener("click", async () => {
+  await window.pablo.macrosAmmo();
+  $("macroMsg").textContent = "En el juego, clic en la munición del inventario";
+  toast("Abre una torreta y haz clic en los bullets");
+});
+$("btnMacroReset").addEventListener("click", async () => {
+  await window.pablo.macrosReset(macrosActive);
+  state = await window.pablo.getState();
+  applyMacrosUi();
+  toast("Número a 1");
+});
+
+window.pablo.onMacrosBound((cfg) => {
+  if (cfg.namerToggle) $("macroNamerBind").textContent = cfg.namerToggle;
+  if (cfg.refillToggle) $("macroRefillBind").textContent = cfg.refillToggle;
+  toast("Bind guardado");
+});
+
+window.pablo.onMacrosStatus((st) => {
+  if (!st) return;
+  if (state) {
+    state.macros = st;
+    if (st.opts) {
+      if (!state.config) state.config = {};
+      state.config.macros = st.opts;
+      const p = st.opts.presets?.[macrosActive] || st.opts.presets?.[st.opts.activePreset];
+      if (p && document.activeElement !== $("macroNumber") && document.activeElement !== $("macroPrefix")) {
+        $("macroNumber").value = String(p.number ?? 1);
+        $("macroNext").textContent = "Siguiente: " + (st.nextName || macroPreviewText(p));
+      }
+    }
+  }
+  if (st.ammoSet) $("macroAmmo").textContent = "Slot munición: " + st.ammoX + ", " + st.ammoY;
+  $("macroMsg").textContent = st.lastMsg || "";
 });
 
 refresh().catch((e) => toast(String(e), false));
