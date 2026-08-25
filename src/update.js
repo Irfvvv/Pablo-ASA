@@ -2,7 +2,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 const FEED_URL = "https://github.com/Irfvvv/Pablo-ASA/releases/latest/download/update.json";
 const SETUP_BASENAME = "PabloASASetup.exe";
@@ -97,11 +97,19 @@ function setupDest() {
 }
 
 function launchSilent(setupPath) {
-  spawn("cmd.exe", ["/c", `timeout /t 2 /nobreak >nul & start "" /wait "${setupPath}" /S`], {
+  spawn("cmd.exe", ["/c", `timeout /t 3 /nobreak >nul & start "" /wait "${setupPath}" /S`], {
     detached: true,
     stdio: "ignore",
     windowsHide: true,
   }).unref();
+}
+
+function isSetupRunning() {
+  const r = spawnSync("tasklist", ["/FI", "IMAGENAME eq PabloASASetup.exe", "/NH"], {
+    windowsHide: true,
+    encoding: "utf8",
+  });
+  return /PabloASASetup\.exe/i.test(String(r.stdout || ""));
 }
 
 module.exports = {
@@ -111,4 +119,5 @@ module.exports = {
   downloadInstaller,
   setupDest,
   launchSilent,
+  isSetupRunning,
 };

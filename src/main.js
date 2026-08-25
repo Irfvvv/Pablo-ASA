@@ -12,14 +12,27 @@ app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.exit(0);
+}
+
+app.on("second-instance", () => {
+  if (win && !win.isDestroyed()) {
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  }
+});
+
 const UPDATE_FEED = {
   provider: "github",
   owner: "Irfvvv",
   repo: "Pablo-ASA",
 };
 
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
 
 function configPath() {
   return path.join(app.getPath("userData"), "config.json");
@@ -31,6 +44,7 @@ function defaultConfig() {
     setupDone: false,
     lastFov: 170,
     cmdQueue: "",
+    pendingUpdate: "",
     clicker: {
       button: "Izquierdo",
       intervalMs: 100,
@@ -111,6 +125,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (!gotLock) return;
   currentCfg = loadConfig();
   createWindow();
   clicker.init(
@@ -153,7 +168,7 @@ app.whenReady().then(() => {
     configureUpdater();
     setTimeout(() => {
       runAutoUpdate(false).catch(() => {});
-    }, 1600);
+    }, 5000);
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -177,13 +192,6 @@ autoUpdater.on("update-not-available", () => send("update-status", { state: "cur
 autoUpdater.on("download-progress", (p) => send("update-status", { state: "downloading", percent: p.percent }));
 autoUpdater.on("update-downloaded", (info) => {
   send("update-status", { state: "ready", version: info.version });
-  setTimeout(() => {
-    try {
-      autoUpdater.quitAndInstall(false, true);
-    } catch {
-      /* el botón Instalar sigue disponible */
-    }
-  }, 1800);
 });
 autoUpdater.on("error", (err) => send("update-status", { state: "error", message: friendlyUpdateError(err) }));
 
@@ -324,22 +332,19 @@ let updating = false;
 
 async function runAutoUpdate(force) {
   if (updating) return { ok: true, busy: true };
+  if (!force && updater.isSetupRunning()) {
+    send("update-status", { state: "current", message: "Instalador en marcha" });
+    return ok({ busy: true });
+  }
   send("update-status", { state: "checking" });
+  if (force) {
+    currentCfg = { ...loadConfig(), pendingUpdate: "" };
+    saveConfig(currentCfg);
+  }
   let manifest;
   try {
     manifest = await updater.fetchManifest();
   } catch (err) {
-    if (app.isPackaged) {
-      try {
-        configureUpdater();
-        await autoUpdater.checkForUpdates();
-        return ok({ packaged: true });
-      } catch (fallbackErr) {
-        const msg = friendlyUpdateError(fallbackErr);
-        send("update-status", { state: "error", message: msg });
-        return fail(msg);
-      }
-    }
     const msg = friendlyUpdateError(err);
     send("update-status", { state: "error", message: msg });
     return fail(msg);
@@ -352,6 +357,11 @@ async function runAutoUpdate(force) {
   }
 
   if (!updater.isNewer(manifest.version, app.getVersion())) {
+    const cfg = loadConfig();
+    if (cfg.pendingUpdate) {
+      currentCfg = { ...cfg, pendingUpdate: "" };
+      saveConfig(currentCfg);
+    }
     const msg = force ? "Ya estás en la última versión (v" + app.getVersion() + ")" : "Estás al día";
     send("update-status", { state: "current", message: msg, version: manifest.version });
     return ok({ version: manifest.version, current: true, message: msg });
@@ -363,6 +373,13 @@ async function runAutoUpdate(force) {
     return ok({ version: manifest.version, packaged: false, message: msg });
   }
 
+  const alreadyTried = loadConfig().pendingUpdate === manifest.version;
+  if (!force && alreadyTried) {
+    const msg = "v" + app.getVersion() + " lista. El update se intentó ya; pulsa Buscar update si quieres repetir.";
+    send("update-status", { state: "current", message: msg, version: manifest.version });
+    return ok({ version: manifest.version, skipped: true, message: msg });
+  }
+
   updating = true;
   send("update-status", { state: "available", version: manifest.version });
   try {
@@ -372,8 +389,10 @@ async function runAutoUpdate(force) {
       send("update-status", { state: "downloading", percent, version: manifest.version });
     });
     send("update-status", { state: "ready", version: manifest.version });
+    currentCfg = { ...loadConfig(), pendingUpdate: manifest.version };
+    saveConfig(currentCfg);
     updater.launchSilent(dest);
-    setTimeout(() => app.quit(), 50);
+    setTimeout(() => app.quit(), 400);
     return ok({ version: manifest.version, installing: true });
   } catch (err) {
     updating = false;
