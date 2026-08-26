@@ -15,7 +15,6 @@ contextBridge.exposeInMainWorld("pablo", {
   copyText: (text) => ipcRenderer.invoke("copy-text", text),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
-  installUpdate: () => ipcRenderer.invoke("install-update"),
   openReleases: () => ipcRenderer.invoke("open-releases"),
   openSetup: () => ipcRenderer.invoke("open-setup"),
   clickerStart: (opts) => ipcRenderer.invoke("clicker-start", opts),

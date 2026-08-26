@@ -1,8 +1,8 @@
 {
   "name": "pablo-asa",
   "productName": "Pablo ASA",
-  "version": "1.0.17",
-  "description": "FOV, execs, autoclicker y comandos para ARK Survival Ascended. Auto-update por GitHub.",
+  "version": "1.0.18",
+  "description": "FOV, execs, autoclicker y comandos para ARK Survival Ascended. Auto-update como Pablo ARK App.",
   "main": "src/main.js",
   "author": "Pablo",
   "license": "MIT",
@@ -13,10 +13,9 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis --publish never && node scripts/write-update-json.js",
-    "publish": "electron-builder --win nsis --publish always"
+    "publish-update": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-update.ps1"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2",
     "koffi": "^3.1.6"
   },
   "devDependencies": {
@@ -51,12 +50,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Pablo ASA",
       "include": "pablo-custom.nsh"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "Irfvvv",
-      "repo": "Pablo-ASA",
-      "releaseType": "release"
     }
   }
 }

@@ -222,7 +222,7 @@ $("btnSaveSetup").addEventListener("click", async () => {
 $("btnUpdate").addEventListener("click", async () => {
   const r = await window.pablo.checkUpdates();
   if (!r?.ok) toast(r?.error || "No se pudo buscar", false);
-  else toast(r.message || ("GitHub: v" + (r.version || "—")));
+  else toast(r.message || ("Update: v" + (r.version || "—")));
 });
 
 window.pablo.onUpdateStatus((s) => {

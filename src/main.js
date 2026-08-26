@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { autoUpdater } = require("electron-updater");
 const asa = require("./asa");
 const { GROUPS, COMMANDS } = require("./commands");
 const clicker = require("./clicker");
@@ -24,15 +23,6 @@ app.on("second-instance", () => {
   }
 });
 
-const UPDATE_FEED = {
-  provider: "github",
-  owner: "Irfvvv",
-  repo: "Pablo-ASA",
-};
-
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = false;
-
 function configPath() {
   return path.join(app.getPath("userData"), "config.json");
 }
@@ -43,7 +33,6 @@ function defaultConfig() {
     setupDone: false,
     lastFov: 170,
     cmdQueue: "",
-    pendingUpdate: "",
     clicker: {
       button: "Izquierdo",
       intervalMs: 100,
@@ -83,7 +72,7 @@ function send(channel, data) {
 }
 
 function releaseUrl() {
-  return `https://github.com/${UPDATE_FEED.owner}/${UPDATE_FEED.repo}/releases`;
+  return updater.FEED_URL.replace(/update\.json$/, "");
 }
 
 function localSetupPath() {
@@ -96,11 +85,6 @@ function localSetupPath() {
     }
   }
   return "";
-}
-
-function configureUpdater() {
-  autoUpdater.setFeedURL(UPDATE_FEED);
-  return true;
 }
 
 function createWindow() {
@@ -138,10 +122,9 @@ app.whenReady().then(() => {
     }
   );
   if (app.isPackaged) {
-    configureUpdater();
     setTimeout(() => {
       runAutoUpdate(false).catch(() => {});
-    }, 5000);
+    }, 1600);
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -157,22 +140,16 @@ app.on("will-quit", () => {
   clicker.shutdown();
 });
 
-autoUpdater.on("checking-for-update", () => send("update-status", { state: "checking" }));
-autoUpdater.on("update-available", (info) => send("update-status", { state: "available", version: info.version }));
-autoUpdater.on("update-not-available", () => send("update-status", { state: "current" }));
-autoUpdater.on("download-progress", (p) => send("update-status", { state: "downloading", percent: p.percent }));
-autoUpdater.on("update-downloaded", (info) => {
-  send("update-status", { state: "ready", version: info.version });
-});
-autoUpdater.on("error", (err) => send("update-status", { state: "error", message: friendlyUpdateError(err) }));
-
 function friendlyUpdateError(err) {
   const raw = String(err?.message || err || "");
-  if (/404/i.test(raw) || /releases\.atom/i.test(raw)) {
-    return "Aún no existe el repo/releases en GitHub. El auto-update empezará cuando Irfvvv/Pablo-ASA sea público y tenga un Release.";
+  if (/timeout/i.test(raw)) {
+    return "Timeout buscando update. Prueba otra vez.";
+  }
+  if (/404/i.test(raw) || /missing/i.test(raw)) {
+    return "Aún no hay update publicado.";
   }
   if (/ENOTFOUND|ECONNREFUSED|net::/i.test(raw)) {
-    return "No hay conexión con GitHub. Prueba más tarde.";
+    return "No hay conexión. Prueba más tarde.";
   }
   return raw.split("\n")[0].slice(0, 180);
 }
@@ -302,36 +279,25 @@ let updating = false;
 
 async function runAutoUpdate(force) {
   if (updating) return { ok: true, busy: true };
-  if (!force && updater.isSetupRunning()) {
-    send("update-status", { state: "current", message: "Instalador en marcha" });
-    return ok({ busy: true });
-  }
-  send("update-status", { state: "checking" });
-  if (force) {
-    currentCfg = { ...loadConfig(), pendingUpdate: "" };
-    saveConfig(currentCfg);
-  }
+  if (force) send("update-status", { state: "checking" });
   let manifest;
   try {
     manifest = await updater.fetchManifest();
   } catch (err) {
+    if (!force) return ok({ skipped: true });
     const msg = friendlyUpdateError(err);
     send("update-status", { state: "error", message: msg });
     return fail(msg);
   }
 
   if (manifest.missing) {
-    const msg = "Aún no hay update.json en GitHub Releases.";
+    if (!force) return ok({ skipped: true });
+    const msg = "Aún no hay update publicado.";
     send("update-status", { state: "error", message: msg });
     return fail(msg);
   }
 
   if (!updater.isNewer(manifest.version, app.getVersion())) {
-    const cfg = loadConfig();
-    if (cfg.pendingUpdate) {
-      currentCfg = { ...cfg, pendingUpdate: "" };
-      saveConfig(currentCfg);
-    }
     const msg = force ? "Ya estás en la última versión (v" + app.getVersion() + ")" : "Estás al día";
     send("update-status", { state: "current", message: msg, version: manifest.version });
     return ok({ version: manifest.version, current: true, message: msg });
@@ -343,13 +309,6 @@ async function runAutoUpdate(force) {
     return ok({ version: manifest.version, packaged: false, message: msg });
   }
 
-  const alreadyTried = loadConfig().pendingUpdate === manifest.version;
-  if (!force && alreadyTried) {
-    const msg = "v" + app.getVersion() + " lista. El update se intentó ya; pulsa Buscar update si quieres repetir.";
-    send("update-status", { state: "current", message: msg, version: manifest.version });
-    return ok({ version: manifest.version, skipped: true, message: msg });
-  }
-
   updating = true;
   send("update-status", { state: "available", version: manifest.version });
   try {
@@ -359,10 +318,8 @@ async function runAutoUpdate(force) {
       send("update-status", { state: "downloading", percent, version: manifest.version });
     });
     send("update-status", { state: "ready", version: manifest.version });
-    currentCfg = { ...loadConfig(), pendingUpdate: manifest.version };
-    saveConfig(currentCfg);
     updater.launchSilent(dest);
-    setTimeout(() => app.quit(), 400);
+    setTimeout(() => app.quit(), 500);
     return ok({ version: manifest.version, installing: true });
   } catch (err) {
     updating = false;
@@ -381,14 +338,9 @@ handle("open-releases", () => {
 
 handle("open-setup", () => {
   const exe = localSetupPath();
-  if (!exe) throw new Error("No encuentro PabloASA-Setup en dist. Ejecuta npm run dist.");
+  if (!exe) throw new Error("No encuentro PabloASASetup en dist. Ejecuta npm run dist.");
   shell.openPath(exe);
   return ok({ path: exe });
-});
-
-handle("install-update", () => {
-  autoUpdater.quitAndInstall();
-  return ok();
 });
 
 handle("clicker-start", (opts) => {
